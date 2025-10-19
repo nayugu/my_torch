@@ -3,7 +3,7 @@ MyTorch
 """
 
 from abc import ABC, abstractmethod
-from typing import OrderedDict
+from typing import OrderedDict, Type
 #import mlx.core as mx
 import numpy as np
 
@@ -30,7 +30,29 @@ class Module(ABC):
         raise NotImplementedError("Must override abstract method in subclasses.")
 
 class Linear(Module):
-    pass
+    """Linear/FC module. Creates randomized weights and biases."""
+    def __init__(self,in_dim:tuple,out_dim:int):
+        flattened_in_dim = np.prod(in_dim) if isinstance(in_dim,tuple) else in_dim
+
+        # Note to self: input_dim -> #rows, output_dim -> #columns
+        self._w = np.random.randn(flattened_in_dim,out_dim)/np.sqrt(flattened_in_dim)
+        self._b = np.zeros((out_dim,1))
+    
+    def forward(self,a_prev):
+        """
+        Input
+        # Follow classical convention
+        a_prev: shape = (in_dim, batch_size)
+        self._w: shape = (in_dim, out_dim)
+        self._b: shape = (out_dim)
+
+        Output
+        a: shape = (output_dim)
+        """
+        if len(a_prev.shape) >= 3:
+            batch_size = a_prev.shape[-1]
+            a_prev = a_prev.reshape(-1,batch_size)
+        return np.dot(self._w.T,a_prev) + self._b
 
 class ReLU(Module):
     pass
