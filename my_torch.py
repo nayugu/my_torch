@@ -8,6 +8,23 @@ from typing import OrderedDict, Type
 import numpy as np
 
 
+class Tensor:
+    def __init__(self, np_array, requires_grad = True):
+        self.parameters = np_array
+        self.grad = None
+
+    def backward(self):
+        """Compute gradients"""
+        pass
+
+    def zero_grad(self):
+        """Clear gradients."""
+        self.grad = np.zeros(shape=self.grad)
+
+    def __array__(self):
+        """Enable direct call by NumPy methods"""
+        return self.parameters
+
 class Module(ABC):
     def __init__(self):
         """
