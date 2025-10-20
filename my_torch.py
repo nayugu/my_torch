@@ -3,15 +3,16 @@ MyTorch
 """
 
 from abc import ABC, abstractmethod
-from typing import OrderedDict, Type
+from typing import OrderedDict, Type, Callable
 #import mlx.core as mx
 import numpy as np
 
-
+# Data Types
 class Tensor:
-    def __init__(self, np_array, requires_grad = True):
-        self.parameters = np_array
+    def __init__(self, np_array, requires_grad = False): # Set requires_grad to True by default for model parameters
+        self.data = np_array
         self.grad = None
+        self.requires_grad = requires_grad
 
     def backward(self):
         """Compute gradients"""
@@ -19,12 +20,17 @@ class Tensor:
 
     def zero_grad(self):
         """Clear gradients."""
-        self.grad = np.zeros(shape=self.grad)
+        self.grad = None
 
     def __array__(self):
         """Enable direct call by NumPy methods"""
-        return self.parameters
+        return self.data
+    
+    @ property
+    def shape(self):
+        return self.data.shape
 
+# Module
 class Module(ABC):
     def __init__(self):
         """
@@ -46,14 +52,15 @@ class Module(ABC):
         """Abstract method for forward propagation."""
         raise NotImplementedError("Must override abstract method in subclasses.")
 
+# Activation Functions
 class Linear(Module):
     """Linear/FC module. Creates randomized weights and biases."""
     def __init__(self,in_dim:tuple,out_dim:int):
         flattened_in_dim = np.prod(in_dim) if isinstance(in_dim,tuple) else in_dim
 
         # Note to self: input_dim -> #rows, output_dim -> #columns
-        self._w = np.random.randn(flattened_in_dim,out_dim)/np.sqrt(flattened_in_dim)
-        self._b = np.zeros((out_dim,1))
+        self._w = Tensor(np.random.randn(flattened_in_dim,out_dim)/np.sqrt(flattened_in_dim))
+        self._b = Tensor(np.zeros((out_dim,1)))
     
     def forward(self,a_prev):
         """
@@ -64,7 +71,7 @@ class Linear(Module):
         self._b: shape = (out_dim)
 
         Output
-        a: shape = (output_dim)
+        a: shape = (out_dim, batch_size)
         """
         if len(a_prev.shape) >= 3:
             batch_size = a_prev.shape[-1]
@@ -85,3 +92,51 @@ class Dropout(Module):
 
 class GeLU(Module):
     pass
+
+# Loss Functions
+class CostFunction(ABC):
+    def __init__(self):
+        pass
+    @ abstractmethod
+    def __call__(self,outputs,targets,loss_calculation: Callable):
+        """
+        outputs: shape = (..., batch_size)
+        targets: shape = (..., batch_size)
+        loss_calculation: a method that takes in y_hat and y to calculate 
+                            loss for individual examples
+        """
+        batch_size = outputs.shape[-1]
+        loss = loss_calculation(outputs,targets)
+        return 0.5 * np.sum(loss) / batch_size
+
+class CrossEntropyLoss(CostFunction):
+    def __init__(self):
+        super().__init__()
+    
+    def __call__(self,outputs,targets):
+        super(
+            outputs,
+            targets,
+            lambda y_hat, y: -np.log(y_hat)*y)
+    
+class BinaryCrossEntropyLoss(CostFunction):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self,outputs,targets):
+        super(
+            outputs,
+            targets,
+            lambda y_hat, y: -np.log(y_hat)*y -np.log(1-y_hat)*(1-y)
+        )
+
+class MeanSquaredError(CostFunction):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self,outputs,targets):
+        super(
+            outputs,
+            targets,
+            lambda y_hat, y: (y_hat-y)**2
+        )
