@@ -10,6 +10,9 @@ import numpy as np
 # Data Types
 class Tensor:
     def __init__(self, np_array, requires_grad = False): # Set requires_grad to True by default for model parameters
+        if not isinstance(np_array,np.ndarray):
+            np_array = np.array(np_array)
+        
         self.data = np_array
         self.grad = None
         self.requires_grad = requires_grad
