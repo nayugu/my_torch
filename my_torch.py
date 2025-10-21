@@ -1,5 +1,5 @@
 """
-MyTorch # test by snowflake
+MyTorch # test anonymity of snowflake
 """
 
 from abc import ABC, abstractmethod
