@@ -1,9 +1,5 @@
 """
-<<<<<<< HEAD
-MyTorch #test branching
-=======
 MyTorch # test by snowflake
->>>>>>> f0dc6574fa1535fc81538b2d1959821fdab5014c
 """
 
 from abc import ABC, abstractmethod
