@@ -1,5 +1,5 @@
 """
-MyTorch
+MyTorch #test branching
 """
 
 from abc import ABC, abstractmethod
@@ -55,7 +55,7 @@ class Module(ABC):
         """Abstract method for forward propagation."""
         raise NotImplementedError("Must override abstract method in subclasses.")
 
-# Layer modules
+# Activation Functions
 class Linear(Module):
     """Linear/FC module. Creates randomized weights and biases."""
     def __init__(self,in_dim:tuple,out_dim:int):
