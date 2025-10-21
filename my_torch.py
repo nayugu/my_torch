@@ -9,13 +9,20 @@ import numpy as np
 
 # Data Types
 class Tensor:
+    # Core methods
     def __init__(self, np_array, requires_grad = False): # Set requires_grad to True by default for model parameters
-        if not isinstance(np_array,np.ndarray):
-            np_array = np.array(np_array)
+        if isinstance(np_array,Tensor):
+            self.data = np_array.data
+            self.grad = np_array.grad
+            self.requires_grad = np_array.requires_grad
         
-        self.data = np_array
-        self.grad = None
-        self.requires_grad = requires_grad
+        else:
+            if not isinstance(np_array,np.ndarray):
+                np_array = np.array(np_array)
+            
+            self.data = np_array
+            self.grad = None
+            self.requires_grad = requires_grad
 
     def backward(self):
         """Compute gradients"""
@@ -32,6 +39,49 @@ class Tensor:
     @ property
     def shape(self):
         return self.data.shape
+    
+    # Methods to create automatic computation graphs
+    
+    # TODO: Create module objects when arithmatic operations are called for back propagation
+    # Arithmatic operations
+    def __add__(self, other):
+        if isinstance(other, Tensor): 
+            return Tensor(self.data + other.data) 
+        else: 
+            return Tensor(self.data + other)
+    
+    def __sub__(self, other):
+        if isinstance(other, Tensor): 
+            return Tensor(self.data - other.data) 
+        else: 
+            return Tensor(self.data - other)
+        
+    def __mul__(self, other):
+        if isinstance(other, Tensor): 
+            return Tensor(self.data * other.data) 
+        else: 
+            return Tensor(self.data * other)
+    
+    def __truediv__(self, other):
+        if isinstance(other, Tensor): 
+            return Tensor(self.data / other.data) 
+        else: 
+            return Tensor(self.data / other)
+    
+    # Reversed order arithmatic operations. E.g. a + b vs. b + a
+    # Only activates if other is NOT a Tensor, because then other.__<operation>__() fails, 
+    # so then Python checks self.__r<operation>__()
+    def __radd__(self, other):
+        return Tensor(other + self.data)
+    
+    def __rsub__(self, other):
+        return Tensor(other - self.data)
+        
+    def __rmul__(self, other):
+        return Tensor(other * self.data)
+
+    def __rtruediv__(self, other):
+        return Tensor(other) 
 
 # Module
 class Module(ABC):
@@ -55,7 +105,7 @@ class Module(ABC):
         """Abstract method for forward propagation."""
         raise NotImplementedError("Must override abstract method in subclasses.")
 
-# Activation Functions
+# Layer modules
 class Linear(Module):
     """Linear/FC module. Creates randomized weights and biases."""
     def __init__(self,in_dim:tuple,out_dim:int):
@@ -94,6 +144,9 @@ class Dropout(Module):
     pass
 
 class GeLU(Module):
+    pass
+
+class Flatten(Module):
     pass
 
 # Loss Functions
