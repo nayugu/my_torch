@@ -97,46 +97,52 @@ class GeLU(Module):
 class CostFunction(ABC):
     def __init__(self):
         pass
+
     @ abstractmethod
-    def __call__(self,outputs,targets,loss_calculation: Callable):
+    def __call__(self,outputs,targets):
         """
+        outputs: shape = (..., batch_size)
+        targets: shape = (..., batch_size)
+        """
+        pass
+
+    def _compute_normalized_cost(self,outputs,targets,loss_calculation: Callable):
+        """ 
+        Apply loss function and compute average cost, taking into account the number of training examples
+
+        Inputs
         outputs: shape = (..., batch_size)
         targets: shape = (..., batch_size)
         loss_calculation: a method that takes in y_hat and y to calculate 
                             loss for individual examples
         """
+        if outputs.shape != targets.shape:
+            raise ValueError(f"shape mismatch: outputs.shape {outputs.shape} not equal targets.shape {targets.shape}")
+
         batch_size = outputs.shape[-1]
         loss = loss_calculation(outputs,targets)
-        return 0.5 * np.sum(loss) / batch_size
+        return np.sum(loss) / batch_size
 
 class CrossEntropyLoss(CostFunction):
-    def __init__(self):
-        super().__init__()
-    
     def __call__(self,outputs,targets):
-        super(
+        self._compute_normalized_loss(
             outputs,
             targets,
-            lambda y_hat, y: -np.log(y_hat)*y)
+            lambda y_hat, y: -np.log(y_hat)*y
+            )
     
 class BinaryCrossEntropyLoss(CostFunction):
-    def __init__(self):
-        super().__init__()
-
     def __call__(self,outputs,targets):
-        super(
+        self._compute_normalized_loss(
             outputs,
             targets,
             lambda y_hat, y: -np.log(y_hat)*y -np.log(1-y_hat)*(1-y)
         )
 
 class MeanSquaredError(CostFunction):
-    def __init__(self):
-        super().__init__()
-
     def __call__(self,outputs,targets):
-        super(
+        self._compute_normalized_loss(
             outputs,
             targets,
-            lambda y_hat, y: (y_hat-y)**2
+            lambda y_hat, y: (y_hat-y)**2 / 2
         )
