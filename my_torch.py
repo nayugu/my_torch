@@ -1,5 +1,5 @@
 """
-MyTorch # test by snowflake
+MyTorch
 """
 
 from abc import ABC, abstractmethod
