@@ -1,5 +1,5 @@
 """
-MyTorch # test anonymity of snowflake 3
+MyTorch # test anonymity of nayugu 4
 """
 
 from abc import ABC, abstractmethod
