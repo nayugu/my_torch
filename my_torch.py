@@ -83,6 +83,9 @@ class Tensor:
 
     def __rtruediv__(self, other):
         return Tensor(other) 
+    
+    # TODO: Create __pow__(), __matmul__(), and their reverses
+    # TODO: Create __neg__(), __abs__()
 # endregion
 
 
