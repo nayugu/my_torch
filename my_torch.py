@@ -7,7 +7,8 @@ from typing import OrderedDict, Type, Callable
 #import mlx.core as mx
 import numpy as np
 
-# Data Types
+
+# region Data Types
 class Tensor:
     # Core methods
     def __init__(self, np_array, requires_grad = False): # Set requires_grad to True by default for model parameters
@@ -82,6 +83,8 @@ class Tensor:
 
     def __rtruediv__(self, other):
         return Tensor(other) 
+# endregion
+
 
 # Module
 class Module(ABC):
@@ -105,7 +108,7 @@ class Module(ABC):
         """Abstract method for forward propagation."""
         raise NotImplementedError("Must override abstract method in subclasses.")
 
-# Layer modules
+# region Layer modules
 class Linear(Module):
     """Linear/FC module. Creates randomized weights and biases."""
     def __init__(self,in_dim:tuple,out_dim:int):
@@ -149,7 +152,10 @@ class GeLU(Module):
 class Flatten(Module):
     pass
 
-# Loss Functions
+# endregion
+
+
+# region Cost Functions
 class CostFunction(ABC):
     def __init__(self):
         pass
@@ -202,3 +208,4 @@ class MeanSquaredError(CostFunction):
             targets,
             lambda y_hat, y: (y_hat-y)**2 / 2
         )
+# endregion
