@@ -123,6 +123,7 @@ class Linear(Module):
     
     def forward(self,a_prev):
         """
+        #TODO: Switch batch_size convention to batch first
         Input
         # Follow classical convention
         a_prev: shape = (in_dim, batch_size)
