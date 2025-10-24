@@ -115,8 +115,12 @@ class Tensor:
     def __rmatmul__(self,other):
         return Tensor(np.dot(other,self.data))
     
-    # TODO: Create __pow__(), __matmul__(), and their reverses
-    # TODO: Create __neg__(), __abs__()
+    # Unitary operations
+    def __neg__(self):
+        return Tensor(-self.data)
+    
+    def __abs__(self):
+        return Tensor(np.abs(self.data))
 # endregion
 
 
