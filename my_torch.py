@@ -27,6 +27,10 @@ class Tensor:
             self.grad = None
             self.requires_grad = requires_grad
 
+        # Keep track of inputs and outputs for computation graph
+        self.inputs = None
+        self.outputs = None
+
     def backward(self):
         """Compute gradients"""
         pass
@@ -38,6 +42,13 @@ class Tensor:
     def __array__(self):
         """Enable direct call by NumPy methods"""
         return self.data
+    
+    def receive_grad(self,grad):
+        """Method called to receive gradient"""
+        if self.grad is None:
+            self.grad = grad
+        else:
+            self.grad += grad
     
     @ property
     def shape(self):
@@ -70,6 +81,18 @@ class Tensor:
             return Tensor(self.data / other.data) 
         else: 
             return Tensor(self.data / other)
+        
+    def __pow__(self, other):
+        if isinstance(other, Tensor):
+            return Tensor(self.data ** other.data)
+        else:
+            return Tensor(self.data ** other)
+        
+    def __matmul__(self, other):
+        if isinstance(other, Tensor):
+            return Tensor(np.dot(self.data,other.data))
+        else:
+            return Tensor(np.dot(self.data,other))
     
     # Reversed order arithmatic operations. E.g. a + b vs. b + a
     # Only activates if other is NOT a Tensor, because then other.__<operation>__() fails, 
@@ -84,7 +107,13 @@ class Tensor:
         return Tensor(other * self.data)
 
     def __rtruediv__(self, other):
-        return Tensor(other) 
+        return Tensor(other / self.data) 
+    
+    def __rpow__(self, other):
+        return Tensor(other ** self.data)
+    
+    def __rmatmul__(self,other):
+        return Tensor(np.dot(other,self.data))
     
     # TODO: Create __pow__(), __matmul__(), and their reverses
     # TODO: Create __neg__(), __abs__()
