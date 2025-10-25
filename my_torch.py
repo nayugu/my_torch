@@ -4,7 +4,7 @@ MyTorch
 
 # region Imports
 from abc import ABC, abstractmethod
-from typing import OrderedDict, Type, Callable
+from typing import OrderedDict, Type, Callable, Optional
 #import mlx.core as mx
 import numpy as np
 # endregion
@@ -28,8 +28,9 @@ class Tensor:
             self.requires_grad = requires_grad
 
         # Keep track of inputs and outputs for computation graph
-        self.inputs = None
-        self.outputs = None
+        # format: OrderedDict[Tensor, [StartingSlice]]
+        self.inputs = OrderedDict() 
+        self.outputs = OrderedDict()
 
     def backward(self):
         """Compute gradients"""
@@ -158,20 +159,20 @@ class Linear(Module):
     
     def forward(self,a_prev):
         """
-        #TODO: Switch batch_size convention to batch first
         Input
-        # Follow classical convention
-        a_prev: shape = (in_dim, batch_size)
+        # batch first because it is logical. E.g. x[0] gives the first batch
+        a_prev: shape = (batch_size, in_dim)
         self._w: shape = (in_dim, out_dim)
         self._b: shape = (out_dim)
 
         Output
-        a: shape = (out_dim, batch_size)
+        a: shape = (batch_size, out_dim)
         """
+        # Flatten a_prev it is of higher dims
         if len(a_prev.shape) >= 3:
-            batch_size = a_prev.shape[-1]
-            a_prev = a_prev.reshape(-1,batch_size)
-        return np.dot(self._w.T,a_prev) + self._b
+            batch_size = a_prev.shape[0]
+            a_prev = a_prev.reshape(batch_size, -1)
+        return np.dot(a_prev,self._w) + self._b
 
 class ReLU(Module):
     pass
@@ -202,8 +203,8 @@ class CostFunction(ABC):
     @ abstractmethod
     def __call__(self,outputs,targets):
         """
-        outputs: shape = (..., batch_size)
-        targets: shape = (..., batch_size)
+        outputs: shape = (batch_size, ...)
+        targets: shape = (batch_size, ...)
         """
         pass
 
@@ -212,15 +213,15 @@ class CostFunction(ABC):
         Apply loss function and compute average cost, taking into account the number of training examples
 
         Inputs
-        outputs: shape = (..., batch_size)
-        targets: shape = (..., batch_size)
+        outputs: shape = (batch_size, ...)
+        targets: shape = (batch_size, ...)
         loss_calculation: a method that takes in y_hat and y to calculate 
                             loss for individual examples
         """
         if outputs.shape != targets.shape:
             raise ValueError(f"shape mismatch: outputs.shape {outputs.shape} not equal targets.shape {targets.shape}")
 
-        batch_size = outputs.shape[-1]
+        batch_size = outputs.shape[0]
         loss = loss_calculation(outputs,targets)
         return np.sum(loss) / batch_size
 
