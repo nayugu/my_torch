@@ -32,7 +32,7 @@ class Tensor:
         self.inputs = OrderedDict() 
         self.outputs = OrderedDict()
 
-    def backward(self):
+    def backward(self) -> None:
         """Compute gradients"""
         pass
 
@@ -49,7 +49,10 @@ class Tensor:
         if self.grad is None:
             self.grad = grad
         else:
-            self.grad += grad
+            if grad.shape == self.grad.shape:
+                self.grad += grad
+            else:
+                raise ValueError("Shape of incoming gradient does not matching existing gradient.")
     
     @ property
     def shape(self):
