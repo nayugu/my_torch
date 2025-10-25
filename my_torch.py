@@ -10,7 +10,7 @@ import numpy as np
 # endregion
 
 
-# region Data Types
+# region Tensor data type
 class Tensor:
     # Core methods
     def __init__(self, np_array, requires_grad = False): # Set requires_grad to True by default for model parameters
@@ -61,7 +61,7 @@ class Tensor:
     # Methods to create automatic computation graphs
     
     # TODO: Create module objects when arithmatic operations are called for back propagation
-    # Arithmatic operations
+    # region Arithmatic operations
     def __add__(self, other):
         if isinstance(other, Tensor): 
             return Tensor(self.data + other.data) 
@@ -100,8 +100,9 @@ class Tensor:
             return Tensor(np.dot(self.data,other.data))
         else:
             return Tensor(np.dot(self.data,other))
+    # endregion
     
-    # Reversed order arithmatic operations. E.g. a + b vs. b + a
+    # region Reversed order arithmatic operations. E.g. a + b vs. b + a
     # Only activates if other is NOT a Tensor, because then other.__<operation>__() fails, 
     # so then Python checks self.__r<operation>__()
     def __radd__(self, other):
@@ -121,25 +122,28 @@ class Tensor:
     
     def __rmatmul__(self,other):
         return Tensor(np.dot(other,self.data))
+    # endregion
     
-    # Unitary operations
+    # region Unitary operations
     def __neg__(self):
         return Tensor(-self.data)
     
     def __abs__(self):
         return Tensor(np.abs(self.data))
+    # endregion
     
-    # Helper methods
+    # region Helper methods
     def append_derivative(self, other, derivative):
         """Helper method to match derivatives to inputs and store them"""
         if other in self.f_inputs:
             self.f_inputs[other].append(derivative)
         else:
             self.f_inputs[other] = [derivative]
+    # endregion
 # endregion
 
 
-# Module
+# region Module
 class Module(ABC):
     def __init__(self):
         """
@@ -160,7 +164,7 @@ class Module(ABC):
     def forward(self):
         """Abstract method for forward propagation."""
         raise NotImplementedError("Must override abstract method in subclasses.")
-
+# endregion
 # region Layer modules
 class Linear(Module):
     """Linear/FC module. Creates randomized weights and biases."""
