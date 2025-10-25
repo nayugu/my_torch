@@ -27,10 +27,10 @@ class Tensor:
             self.grad = None
             self.requires_grad = requires_grad
 
-        # Keep track of inputs and outputs for computation graph
-        # format: OrderedDict[Tensor, [StartingSlice]]
-        self.inputs = OrderedDict() 
-        self.outputs = OrderedDict()
+        # Keep track of forward prop inputs and outputs for computation graph
+        # format: OrderedDict[Tensor, [Callable derivatives]]
+        self.f_inputs = OrderedDict() 
+        self.f_outputs = OrderedDict()
 
     def backward(self) -> None:
         """Compute gradients"""
@@ -87,12 +87,15 @@ class Tensor:
             return Tensor(self.data / other)
         
     def __pow__(self, other):
+        derivative = lambda x: other*(x**(other-1))
         if isinstance(other, Tensor):
+            self.append_derivative(other,derivative)
             return Tensor(self.data ** other.data)
         else:
             return Tensor(self.data ** other)
         
     def __matmul__(self, other):
+        self.outputs[other] = other
         if isinstance(other, Tensor):
             return Tensor(np.dot(self.data,other.data))
         else:
@@ -125,6 +128,14 @@ class Tensor:
     
     def __abs__(self):
         return Tensor(np.abs(self.data))
+    
+    # Helper methods
+    def append_derivative(self, other, derivative):
+        """Helper method to match derivatives to inputs and store them"""
+        if other in self.f_inputs:
+            self.f_inputs[other].append(derivative)
+        else:
+            self.f_inputs[other] = [derivative]
 # endregion
 
 
