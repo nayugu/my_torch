@@ -30,7 +30,6 @@ class Tensor:
         # Keep track of forward prop inputs and outputs for computation graph
         # format: OrderedDict[Tensor, [Callable derivatives]]
         self.f_inputs = OrderedDict() 
-        self.f_outputs = OrderedDict()
 
     def backward(self) -> None:
         """Compute gradients"""
