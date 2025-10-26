@@ -160,7 +160,6 @@ class Module(ABC):
             self._modules[name] = value
         object.__setattr__(self,name,value)
 
-    @abstractmethod
     def forward(self):
         """Abstract method for forward propagation."""
         raise NotImplementedError("Must override abstract method in subclasses.")
