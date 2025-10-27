@@ -38,7 +38,8 @@ class Tensor:
     def backward(self) -> None:
         """Compute the sum of gradients of given tensors with respect to graph leaves."""
         for parent_tensor,grad in self.grad_to_parents.items():
-            parent_tensor.receive_grad(grad)
+            if parent_tensor.requires_grad:
+                parent_tensor.receive_grad(grad)
 
     def zero_grad(self):
         """Clear gradients."""
