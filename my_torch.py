@@ -22,7 +22,7 @@ class Tensor:
         if isinstance(ndarray,Tensor):
             self.data = ndarray.data
             self.grad = ndarray.grad # Gradient used to update self
-            self.grad_to_parents = ndarray.grad_to_parents # d/dparents (current module), to be sent to parent modules
+            self.grad_to_parents: OrderedDict[Tensor,Tensor] = ndarray.grad_to_parents # d/dparents (current module), to be sent to parent modules
             self.requires_grad = ndarray.requires_grad
         
         else:
@@ -31,13 +31,14 @@ class Tensor:
             
             self.data = ndarray
             self.grad = None
-            self.grad_to_parents = grad_to_parents
+            self.grad_to_parents: OrderedDict[Tensor,Tensor] = grad_to_parents
             self.requires_grad = requires_grad
 
     # TODO: Use slicing and views to enable converging outputs to slice the gradient in back prop
     def backward(self) -> None:
         """Compute the sum of gradients of given tensors with respect to graph leaves."""
-        pass
+        for parent_tensor,grad in self.grad_to_parents.items():
+            parent_tensor.receive_grad(grad)
 
     def zero_grad(self):
         """Clear gradients."""
@@ -46,6 +47,9 @@ class Tensor:
     def __array__(self):
         """Enable direct call by NumPy methods"""
         return self.data
+    
+    def __str__(self):
+        return f"Data:\n{str(self.data)}\nGradients:{str(self.grad)}"
     
     def receive_grad(self,grad):
         """Method called to receive gradient"""
