@@ -3,11 +3,11 @@ MyTorch
 """
 
 # region Imports
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import OrderedDict, Type, Callable, Optional
 #import mlx.core as mx
 import numpy as np
-from __future__ import annotations
 # endregion
 
 
@@ -27,17 +27,12 @@ class Tensor:
         
         else:
             if not isinstance(ndarray,np.ndarray):
-                ndarray = np.array(ndarray)
+                ndarray = np.asarray(ndarray, dtype=np.float64)
             
             self.data = ndarray
             self.grad = None
             self.grad_to_parents = grad_to_parents
             self.requires_grad = requires_grad
-
-
-        # Keep track of forward prop inputs for computation graph
-        # format: OrderedDict[input Tensor, [Tensor derivatives to be summed]]
-        self.parent_tensors: OrderedDict[Tensor,list[Tensor]] = OrderedDict() 
 
     # TODO: Use slicing and views to enable converging outputs to slice the gradient in back prop
     def backward(self) -> None:
@@ -104,14 +99,14 @@ class Tensor:
             output = Tensor(operation(self.data,other.data)) # Operation output
 
             # Calculate partial derivatives. E.g. z = w * x
-            output.grad_to_parents[self]  = dself(self,other)  # dzdw
-            output.grad_to_parents[other] = dother(self,other) # dzdx 
+            output.grad_to_parents[self]  = dself(self.data,other.data)  # dzdw
+            output.grad_to_parents[other] = dother(self.data,other.data) # dzdx 
         
         else: # If other is NOT a Tensor
             output = Tensor(operation(self.data,other)) # Operation output (use other directly)
 
             # Calculate partial derivatives.
-            output.grad_to_parents[self] = dself(self,other)
+            output.grad_to_parents[self] = dself(self.data,other)
             # Do not update dother, since it is not a Tensor with parameters to be updated
 
         return output
@@ -174,7 +169,7 @@ class Tensor:
             dother =    lambda s,o: s.T
         )
     # endregion
-    # TODO: Actually change operations for reverse order operations in calc_output_and_grad method call
+    
     # region Reversed order arithmatic operations. E.g. a + b vs. b + a
     # Only activates if other is NOT a Tensor, because then other.__<operation>__() fails, 
     # so then Python checks self.__r<operation>__()
@@ -182,7 +177,7 @@ class Tensor:
         # output = other + self
         return self.calc_output_and_grad(
             other,
-            operation = lambda s,o: s + o,
+            operation = lambda s,o: o + s,
             dself =     lambda s,o: 1,
             dother =    lambda s,o: 1
         )
@@ -191,16 +186,16 @@ class Tensor:
         # output = other - self
         return self.calc_output_and_grad(
             other,
-            operation = lambda s,o: s - o,
-            dself =     lambda s,o: 1,
-            dother =    lambda s,o: -1
+            operation = lambda s,o: o - s,
+            dself =     lambda s,o: -1,
+            dother =    lambda s,o: 1
         )
         
     def __rmul__(self, other):
         # output = other * self
         return self.calc_output_and_grad(
             other,
-            operation = lambda s,o: s * o,
+            operation = lambda s,o: o * s,
             dself =     lambda s,o: o,
             dother =    lambda s,o: s
         )
@@ -209,25 +204,25 @@ class Tensor:
         # output = other / self = other * (self ** -1)
         return self.calc_output_and_grad(
             other,
-            operation = lambda s,o: s / o,
-            dself =     lambda s,o: 1/o,
-            dother =    lambda s,o: s * -(o ** -2)
+            operation = lambda s,o: o / s,
+            dself =     lambda s,o: o * -(s ** -2),
+            dother =    lambda s,o: 1/s,
         )
     
     def __rpow__(self, other):
         # output = other ** self
         return self.calc_output_and_grad(
             other,
-            operation = lambda s,o: s ** o,
-            dself =     lambda s,o: o * (s ** (o-1)),
-            dother =    lambda s,o: np.log(s) * s ** o
+            operation = lambda s,o: o ** s,
+            dself =     lambda s,o: np.log(o) * o ** s,
+            dother =    lambda s,o: s * (o ** (s-1)),
         )
     
     def __rmatmul__(self, other):
         # output = other @ self
         return self.calc_output_and_grad(
             other,
-            operation = lambda s,o: s @ o,
+            operation = lambda s,o: o @ s,
             dself =     lambda s,o: o.T,
             dother =    lambda s,o: s.T
         )
