@@ -7,32 +7,41 @@ from abc import ABC, abstractmethod
 from typing import OrderedDict, Type, Callable, Optional
 #import mlx.core as mx
 import numpy as np
+from __future__ import annotations
 # endregion
 
 
 # region Tensor data type
 class Tensor:
     # Core methods
-    def __init__(self, np_array, requires_grad = False): # Set requires_grad to True by default for model parameters
-        if isinstance(np_array,Tensor):
-            self.data = np_array.data
-            self.grad = np_array.grad
-            self.requires_grad = np_array.requires_grad
+    def __init__(self, 
+                 ndarray,  
+                 grad_to_parents = OrderedDict(), # Ordered dict storing gradients to send to parent modules
+                 requires_grad = False): # Remember to set requires_grad to True by default for model parameters
+        
+        if isinstance(ndarray,Tensor):
+            self.data = ndarray.data
+            self.grad = ndarray.grad # Gradient used to update self
+            self.grad_to_parents = ndarray.grad_to_parents # d/dparents (current module), to be sent to parent modules
+            self.requires_grad = ndarray.requires_grad
         
         else:
-            if not isinstance(np_array,np.ndarray):
-                np_array = np.array(np_array)
+            if not isinstance(ndarray,np.ndarray):
+                ndarray = np.array(ndarray)
             
-            self.data = np_array
+            self.data = ndarray
             self.grad = None
+            self.grad_to_parents = grad_to_parents
             self.requires_grad = requires_grad
 
-        # Keep track of forward prop inputs and outputs for computation graph
-        # format: OrderedDict[Tensor, [Callable derivatives]]
-        self.f_inputs = OrderedDict() 
 
+        # Keep track of forward prop inputs for computation graph
+        # format: OrderedDict[input Tensor, [Tensor derivatives to be summed]]
+        self.f_inputs: OrderedDict[Tensor,list[Tensor]] = OrderedDict() 
+
+    # TODO: Use slicing and views to enable converging outputs to slice the gradient in back prop
     def backward(self) -> None:
-        """Compute gradients"""
+        """Compute the sum of gradients of given tensors with respect to graph leaves."""
         pass
 
     def zero_grad(self):
@@ -58,47 +67,112 @@ class Tensor:
         return self.data.shape
     
     # Methods to create automatic computation graphs
+
+    # Helper method to reduce boilerplate code
+    def calc_output_and_grad(
+            self: Tensor,
+            other: Tensor,
+            operation: Callable, 
+            dself: Callable,
+            dother: Callable
+            ) -> Tensor:
+        """Takes in inputs for an operation, then calculates the partial derivatives of the 
+        operation output with respect to its inputs. Checks if other is a Tensor. 
+        If so, then the operation uses self.data and other.data,
+        and both self.grad_to_parents and other.grad_to_parents are updated. 
+        If other is not a Tensor, the operation uses other directly in the operation
+        and only self.grad_to_parents is updated.
+
+        Args:
+            self: Tensor
+            other: Tensor
+            operation: Callable - func(self, other) -> operation_output
+            dself: Callable - func(self, other) -> d_operation_output / d_self
+            dother: Callable - func(self, other) -> d_operation_output / d_other
+
+        Example:
+        calc_output_and_grad(
+            self = Tensor[...]\n
+            other = Tensor[...]\n
+            operation = lambda s,o: s * o\n
+            dself = lambda s,o: o\n
+            dother = lambda s,o: s\n
+            )
+        """
+
+        if isinstance(other, Tensor): # If other is a Tensor
+            output = Tensor(operation(self.data,other.data)) # Operation output
+
+            # Calculate partial derivatives. E.g. z = w * x
+            output.grad_to_parents[self]  = dself(self,other)  # dzdw
+            output.grad_to_parents[other] = dother(self,other) # dzdx 
+        
+        else: # If other is NOT a Tensor
+            output = Tensor(operation(self.data,other)) # Operation output (use other directly)
+
+            # Calculate partial derivatives.
+            output.grad_to_parents[self] = dself(self,other)
+            # Do not update dother, since it is not a Tensor with parameters to be updated
+
+        return output
+    
     
     # TODO: Create module objects when arithmatic operations are called for back propagation
     # region Arithmatic operations
     def __add__(self, other):
-        if isinstance(other, Tensor): 
-            return Tensor(self.data + other.data) 
-        else: 
-            return Tensor(self.data + other)
+        # output = self + other
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s + o,
+            dself =     lambda s,o: 1,
+            dother =    lambda s,o: 1
+        )
     
     def __sub__(self, other):
-        if isinstance(other, Tensor): 
-            return Tensor(self.data - other.data) 
-        else: 
-            return Tensor(self.data - other)
+        # output = self - other
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s - o,
+            dself =     lambda s,o: 1,
+            dother =    lambda s,o: -1
+        )
         
     def __mul__(self, other):
-        if isinstance(other, Tensor): 
-            return Tensor(self.data * other.data) 
-        else: 
-            return Tensor(self.data * other)
-    
+        # output = self * other
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s * o,
+            dself =     lambda s,o: o,
+            dother =    lambda s,o: s
+        )
+
     def __truediv__(self, other):
-        if isinstance(other, Tensor): 
-            return Tensor(self.data / other.data) 
-        else: 
-            return Tensor(self.data / other)
-        
+        # output = self / other = self * (other ** -1)
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s / o,
+            dself =     lambda s,o: 1/o,
+            dother =    lambda s,o: s * -(o ** -2)
+        )
+    
     def __pow__(self, other):
-        derivative = lambda x: other*(x**(other-1))
-        if isinstance(other, Tensor):
-            self.append_derivative(other,derivative)
-            return Tensor(self.data ** other.data)
-        else:
-            return Tensor(self.data ** other)
-        
+        # output = self ** other
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s ** o,
+            dself =     lambda s,o: o * (s ** (o-1)),
+            dother =    lambda s,o: np.log(s) * s ** o
+        )
+    
+    # TODO: Learn Matrix Calculus
     def __matmul__(self, other):
-        self.outputs[other] = other
-        if isinstance(other, Tensor):
-            return Tensor(np.dot(self.data,other.data))
-        else:
-            return Tensor(np.dot(self.data,other))
+        # output = self @ other
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s @ o,
+            dself =     lambda s,o: o.T,
+            dother =    lambda s,o: s.T
+        )
     # endregion
     
     # region Reversed order arithmatic operations. E.g. a + b vs. b + a
@@ -132,8 +206,10 @@ class Tensor:
     # endregion
     
     # region Helper methods
+    # TODO: Consider removing this
     def append_derivative(self, other, derivative):
-        """Helper method to match derivatives to inputs and store them"""
+        """Helper method to store derivatives. Done because appending, and then summing with a vectorized approach
+         because this is faster than summing when encountering every derivative"""
         if other in self.f_inputs:
             self.f_inputs[other].append(derivative)
         else:
