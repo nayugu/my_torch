@@ -37,7 +37,7 @@ class Tensor:
 
         # Keep track of forward prop inputs for computation graph
         # format: OrderedDict[input Tensor, [Tensor derivatives to be summed]]
-        self.f_inputs: OrderedDict[Tensor,list[Tensor]] = OrderedDict() 
+        self.parent_tensors: OrderedDict[Tensor,list[Tensor]] = OrderedDict() 
 
     # TODO: Use slicing and views to enable converging outputs to slice the gradient in back prop
     def backward(self) -> None:
@@ -179,22 +179,58 @@ class Tensor:
     # Only activates if other is NOT a Tensor, because then other.__<operation>__() fails, 
     # so then Python checks self.__r<operation>__()
     def __radd__(self, other):
-        return Tensor(other + self.data)
+        # output = other + self
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s + o,
+            dself =     lambda s,o: 1,
+            dother =    lambda s,o: 1
+        )
     
     def __rsub__(self, other):
-        return Tensor(other - self.data)
+        # output = other - self
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s - o,
+            dself =     lambda s,o: 1,
+            dother =    lambda s,o: -1
+        )
         
     def __rmul__(self, other):
-        return Tensor(other * self.data)
+        # output = other * self
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s * o,
+            dself =     lambda s,o: o,
+            dother =    lambda s,o: s
+        )
 
     def __rtruediv__(self, other):
-        return Tensor(other / self.data) 
+        # output = other / self = other * (self ** -1)
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s / o,
+            dself =     lambda s,o: 1/o,
+            dother =    lambda s,o: s * -(o ** -2)
+        )
     
     def __rpow__(self, other):
-        return Tensor(other ** self.data)
+        # output = other ** self
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s ** o,
+            dself =     lambda s,o: o * (s ** (o-1)),
+            dother =    lambda s,o: np.log(s) * s ** o
+        )
     
-    def __rmatmul__(self,other):
-        return Tensor(np.dot(other,self.data))
+    def __rmatmul__(self, other):
+        # output = other @ self
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s @ o,
+            dself =     lambda s,o: o.T,
+            dother =    lambda s,o: s.T
+        )
     # endregion
     
     # region Unitary operations
