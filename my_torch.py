@@ -71,7 +71,7 @@ class Tensor:
     # Helper method to reduce boilerplate code
     def calc_output_and_grad(
             self: Tensor,
-            other: Tensor,
+            other: Optional[Tensor],
             operation: Callable, 
             dself: Callable,
             dother: Callable
@@ -108,11 +108,16 @@ class Tensor:
             output.grad_to_parents[other] = dother(self.data,other.data) # dzdx 
         
         else: # If other is NOT a Tensor
-            output = Tensor(operation(self.data,other)) # Operation output (use other directly)
-
-            # Calculate partial derivatives.
-            output.grad_to_parents[self] = dself(self.data,other)
-            # Do not update dother, since it is not a Tensor with parameters to be updated
+            if other is None: # If it is a unitary operation
+                output = Tensor(operation(self.data))
+                # Calculate partial derivatives.
+                output.grad_to_parents[self] = dself(self.data)
+            
+            else: # If it is not a unitary operation
+                output = Tensor(operation(self.data,other)) # Operation output (use other directly)
+                # Calculate partial derivatives.
+                output.grad_to_parents[self] = dself(self.data,other)
+                # Do not update dother, since it is not a Tensor with parameters to be updated
 
         return output
     
@@ -235,21 +240,22 @@ class Tensor:
     
     # region Unitary operations
     def __neg__(self):
-        return Tensor(-self.data)
+        # output = -self
+        return self.calc_output_and_grad(
+            other=None,
+            operation = lambda s: -s,
+            dself =     lambda s: -1,
+            dother =    None
+        )
     
     def __abs__(self):
-        return Tensor(np.abs(self.data))
-    # endregion
-    
-    # region Helper methods
-    # TODO: Consider removing this
-    def append_derivative(self, other, derivative):
-        """Helper method to store derivatives. Done because appending, and then summing with a vectorized approach
-         because this is faster than summing when encountering every derivative"""
-        if other in self.f_inputs:
-            self.f_inputs[other].append(derivative)
-        else:
-            self.f_inputs[other] = [derivative]
+        # output = |self| = np.abs(self)
+        return self.calc_output_and_grad(
+            other=None,
+            operation = lambda s: np.abs(s),
+            dself =     lambda s: np.sign(s),
+            dother =    None
+        )
     # endregion
 # endregion
 
