@@ -174,7 +174,7 @@ class Tensor:
             dother =    lambda s,o: s.T
         )
     # endregion
-    
+    # TODO: Actually change operations for reverse order operations in calc_output_and_grad method call
     # region Reversed order arithmatic operations. E.g. a + b vs. b + a
     # Only activates if other is NOT a Tensor, because then other.__<operation>__() fails, 
     # so then Python checks self.__r<operation>__()
