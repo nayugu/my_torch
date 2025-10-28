@@ -309,11 +309,11 @@ class Tensor:
             dother =    None
         )
     
-    def __sum__(self):
+    def __sum__(self, axis=None):
         # output = np.sum(self)
         return self.calc_output_and_grad(
             other=None,
-            operation=lambda s: np.sum(s),
+            operation=lambda s: np.sum(s,axis=axis),
             dself = lambda s: np.ones_like(s),
             dother = None
         )
@@ -345,6 +345,23 @@ class Tensor:
             dself = lambda s: 1 / (np.cos(s)**2),
             dother = None
         )
+    
+    # Common activation functions
+    def __relu__(self):
+        # output = ReLU(self)
+        pass
+
+    def __sigmoid__(self):
+        # output = Sigmoid(self)
+        pass
+
+    def __gelu__(self):
+        # output = GeLU(self)
+        pass
+
+    def __softmax__(self):
+        # output = Softmax(self)
+        pass
 
     # endregion
 # endregion
