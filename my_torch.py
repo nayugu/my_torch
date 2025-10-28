@@ -168,7 +168,7 @@ class Tensor:
                 output = Tensor(operation(self.data,other)) # Operation output (use other directly)
 
                 # Calculate partial derivatives.
-                output.partial_d[self] = dself(self.data) # np.ndarray
+                output.partial_d[self] = dself(self.data,other) # np.ndarray
 
         return output
     # endregion
