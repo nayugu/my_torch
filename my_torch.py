@@ -10,41 +10,84 @@ from typing import OrderedDict, Type, Callable, Optional
 import numpy as np
 # endregion
 
+# region Global Helper Methods
+def print_partial_d(partial_d_dict):
+        """
+        Prints the partial derivatives stored within a dictionary
+        """
+        output = "\nPartial Derivatives\n"
+        for tensor,partial_d in partial_d_dict.items():
+            if tensor:
+                output += (f"{type(tensor)}:{tensor.data} : {partial_d}\n")
+        print(output)
+        return output
+# endregion
 
 # region Tensor data type
 class Tensor:
     # Core methods
     def __init__(self, 
-                 ndarray,  
-                 grad_to_parents = OrderedDict(), # Ordered dict storing gradients to send to parent modules
+                 ndarray, 
                  requires_grad = False): # Remember to set requires_grad to True by default for model parameters
         
         if isinstance(ndarray,Tensor):
             self.data = ndarray.data
-            self.grad = ndarray.grad # Gradient used to update self
-            self.grad_to_parents: OrderedDict[Tensor,Tensor] = ndarray.grad_to_parents # d/dparents (current module), to be sent to parent modules
-            self.requires_grad = ndarray.requires_grad
         
         else:
             if not isinstance(ndarray,np.ndarray):
                 ndarray = np.asarray(ndarray, dtype=np.float64)
-            
             self.data = ndarray
-            self.grad = None
-            self.grad_to_parents: OrderedDict[Tensor,Tensor] = grad_to_parents
-            self.requires_grad = requires_grad
+            
+        self.grad: Optional[np.ndarray] = None
+        self.partial_d: dict[Tensor,Tensor] = {} # With respect to __: partial derivative of self
+        self.requires_grad = requires_grad
 
     # TODO: Use slicing and views to enable converging outputs to slice the gradient in back prop
-    def backward(self) -> None:
-        """Compute the sum of gradients of given tensors with respect to graph leaves."""
-        for parent_tensor,grad in self.grad_to_parents.items():
-            if parent_tensor.requires_grad:
-                parent_tensor.receive_grad(grad)
+    
+    # region Calculus
+    def recursive_chain_rule(node: Tensor,
+                            leaves: dict[Tensor,Tensor] = {}, accumulated_grad=1):
+        if leaves is None:
+            leaves: dict[Tensor,Tensor] = {}
+            
+        if node.partial_d == {}:
+            return node
+        else:
+            for sub_node, d_sub_node in node.partial_d.items():
+                new_accumulated_grad = accumulated_grad * d_sub_node
+                leaf = sub_node.recursive_chain_rule(leaves=leaves,
+                                                     accumulated_grad=new_accumulated_grad)
+                if leaf in leaves:
+                    leaves[leaf] += new_accumulated_grad
+                else:
+                    leaves[leaf] = new_accumulated_grad
+        
+    def backward(self):
+        leaves: dict[Tensor,np.ndarray] = {}
+        self.recursive_chain_rule(leaves=leaves)
+        del leaves[None]
+        for leaf,leaf_grad in leaves.items():
+            leaf.receive_grad(leaf_grad)
+        return leaves
+    
+    def receive_grad(self,grad):
+        """Method called to receive gradient"""
+        if self.requires_grad:
+            if self.grad is None:
+                self.grad = grad
+            else:
+                if grad.shape == self.grad.shape:
+                    self.grad += grad
+                else:
+                    raise ValueError("Shape of incoming gradient does not matching existing gradient.")
+    
 
     def zero_grad(self):
         """Clear gradients."""
         self.grad = None
+    # endregion
 
+    # region Helper Methods
     def __array__(self):
         """Enable direct call by NumPy methods"""
         return self.data
@@ -52,16 +95,7 @@ class Tensor:
     def __str__(self):
         return f"Data:\n{str(self.data)}\nGradients:{str(self.grad)}"
     
-    def receive_grad(self,grad):
-        """Method called to receive gradient"""
-        if self.grad is None:
-            self.grad = grad
-        else:
-            if grad.shape == self.grad.shape:
-                self.grad += grad
-            else:
-                raise ValueError("Shape of incoming gradient does not matching existing gradient.")
-    
+
     @ property
     def shape(self):
         return self.data.shape
@@ -79,9 +113,9 @@ class Tensor:
         """Takes in inputs for an operation, then calculates the partial derivatives of the 
         operation output with respect to its inputs. Checks if other is a Tensor. 
         If so, then the operation uses self.data and other.data,
-        and both self.grad_to_parents and other.grad_to_parents are updated. 
+        and both self.partial_d and other.partial_d are updated. 
         If other is not a Tensor, the operation uses other directly in the operation
-        and only self.grad_to_parents is updated.
+        and only self.partial_d is updated.
 
         Args:
             self: Tensor
@@ -104,12 +138,8 @@ class Tensor:
             output = Tensor(operation(self.data,other.data)) # Operation output
 
             # Calculate partial derivatives. E.g. z = w * x
-
-            # for grandparent_tensor,grad_to_grandparent in self.grad_to_parents.items():
-            #     self.grad_to_parents[grandparent_tensor] = grad_to_grandparent.data * dself(self.data)
-
-            output.grad_to_parents[self]  = dself(self.data,other.data)  # dzdw
-            output.grad_to_parents[other] = dother(self.data,other.data) # dzdx 
+            output.partial_d[self] = dself(self.data,other.data)  # dzdw, np.ndarray
+            output.partial_d[other] = dother(self.data,other.data) # dzdx, np.ndarray
         
         else: # If other is NOT a Tensor
 
@@ -117,15 +147,17 @@ class Tensor:
                 output = Tensor(operation(self.data))
 
                 # Calculate partial derivatives.
-                output.grad_to_parents[self] = dself(self.data)
+                output.partial_d[self] = dself(self.data) # np.ndarray
             
+
             else: # Non-unitary operation
                 output = Tensor(operation(self.data,other)) # Operation output (use other directly)
 
                 # Calculate partial derivatives.
-                output.grad_to_parents[self] = dself(self.data)
+                output.partial_d[self] = dself(self.data) # np.ndarray
 
         return output
+    # endregion
     
     
     # TODO: Create module objects when arithmatic operations are called for back propagation
