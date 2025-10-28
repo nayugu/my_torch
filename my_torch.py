@@ -17,8 +17,12 @@ def print_partial_d(partial_d_dict):
         """
         output = "\nPartial Derivatives\n"
         for tensor,partial_d in partial_d_dict.items():
-            if tensor:
-                output += (f"{type(tensor)}:{tensor.data} : {partial_d}\n")
+            if tensor: # Not none
+                if tensor.name != None:
+                    name = tensor.name
+                else:
+                    name = type(tensor)
+                output += (f"{name}{tensor.data} : {partial_d}\n")
         print(output)
         return output
 # endregion
@@ -28,6 +32,7 @@ class Tensor:
     # Core methods
     def __init__(self, 
                  ndarray, 
+                 name:Optional[str] = None,
                  requires_grad = False): # Remember to set requires_grad to True by default for model parameters
         
         if isinstance(ndarray,Tensor):
@@ -37,18 +42,19 @@ class Tensor:
             if not isinstance(ndarray,np.ndarray):
                 ndarray = np.asarray(ndarray, dtype=np.float64)
             self.data = ndarray
-            
+        
+        self.name = name
         self.grad: Optional[np.ndarray] = None
-        self.partial_d: dict[Tensor,Tensor] = {} # With respect to __: partial derivative of self
+        self.partial_d: dict[Tensor,np.ndarray] = {} # With respect to __: partial derivative of self
         self.requires_grad = requires_grad
 
     # TODO: Use slicing and views to enable converging outputs to slice the gradient in back prop
     
     # region Calculus
     def recursive_chain_rule(node: Tensor,
-                            leaves: dict[Tensor,Tensor] = {}, accumulated_grad=1):
+                            leaves: dict[Tensor,np.ndarray] = {}, accumulated_grad=1):
         if leaves is None:
-            leaves: dict[Tensor,Tensor] = {}
+            leaves: dict[Tensor,np.ndarray] = {}
             
         if node.partial_d == {}:
             return node
@@ -93,7 +99,7 @@ class Tensor:
         return self.data
     
     def __str__(self):
-        return f"Data:\n{str(self.data)}\nGradients:{str(self.grad)}"
+        return f"Tensor:\n{str(self.data)}\nGradients:{str(self.grad)}"
     
 
     @ property
