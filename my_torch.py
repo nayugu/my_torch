@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 from typing import OrderedDict, Type, Callable, Optional
 #import mlx.core as mx
 import numpy as np
+
 # endregion
 
 # region Global Helper Methods
@@ -72,9 +73,14 @@ class Tensor:
         leaves: dict[Tensor,np.ndarray] = {}
         self.recursive_chain_rule(leaves=leaves)
         del leaves[None]
+
+        result = {leaf: grad.copy() if isinstance(grad, np.ndarray)
+                  else grad for leaf, grad in leaves.items()}
+
         for leaf,leaf_grad in leaves.items():
             leaf.receive_grad(leaf_grad)
-        return leaves
+
+        return result
     
     def receive_grad(self,grad):
         """Method called to receive gradient"""
@@ -82,7 +88,9 @@ class Tensor:
             if self.grad is None:
                 self.grad = grad
             else:
-                if grad.shape == self.grad.shape:
+                if (isinstance(grad,np.float64) or
+                    isinstance(grad,float) or
+                    grad.shape == self.grad.shape):
                     self.grad += grad
                 else:
                     raise ValueError("Shape of incoming gradient does not matching existing gradient.")
@@ -173,8 +181,8 @@ class Tensor:
         return self.calc_output_and_grad(
             other,
             operation = lambda s,o: s + o,
-            dself =     lambda s,o: 1,
-            dother =    lambda s,o: 1
+            dself =     lambda s,o: 1.,
+            dother =    lambda s,o: 1.
         )
     
     def __sub__(self, other):
@@ -182,8 +190,8 @@ class Tensor:
         return self.calc_output_and_grad(
             other,
             operation = lambda s,o: s - o,
-            dself =     lambda s,o: 1,
-            dother =    lambda s,o: -1
+            dself =     lambda s,o: 1.,
+            dother =    lambda s,o: -1.
         )
         
     def __mul__(self, other):
@@ -232,8 +240,8 @@ class Tensor:
         return self.calc_output_and_grad(
             other,
             operation = lambda s,o: o + s,
-            dself =     lambda s,o: 1,
-            dother =    lambda s,o: 1
+            dself =     lambda s,o: 1.,
+            dother =    lambda s,o: 1.
         )
     
     def __rsub__(self, other):
@@ -241,8 +249,8 @@ class Tensor:
         return self.calc_output_and_grad(
             other,
             operation = lambda s,o: o - s,
-            dself =     lambda s,o: -1,
-            dother =    lambda s,o: 1
+            dself =     lambda s,o: -1.,
+            dother =    lambda s,o: 1.
         )
         
     def __rmul__(self, other):
@@ -288,7 +296,7 @@ class Tensor:
         return self.calc_output_and_grad(
             other=None,
             operation = lambda s: -s,
-            dself =     lambda s: -1,
+            dself =     lambda s: -1.,
             dother =    None
         )
     
