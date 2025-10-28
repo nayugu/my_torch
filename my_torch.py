@@ -104,20 +104,26 @@ class Tensor:
             output = Tensor(operation(self.data,other.data)) # Operation output
 
             # Calculate partial derivatives. E.g. z = w * x
+
+            # for grandparent_tensor,grad_to_grandparent in self.grad_to_parents.items():
+            #     self.grad_to_parents[grandparent_tensor] = grad_to_grandparent.data * dself(self.data)
+
             output.grad_to_parents[self]  = dself(self.data,other.data)  # dzdw
             output.grad_to_parents[other] = dother(self.data,other.data) # dzdx 
         
         else: # If other is NOT a Tensor
+
             if other is None: # If it is a unitary operation
                 output = Tensor(operation(self.data))
+
                 # Calculate partial derivatives.
                 output.grad_to_parents[self] = dself(self.data)
             
-            else: # If it is not a unitary operation
+            else: # Non-unitary operation
                 output = Tensor(operation(self.data,other)) # Operation output (use other directly)
+
                 # Calculate partial derivatives.
-                output.grad_to_parents[self] = dself(self.data,other)
-                # Do not update dother, since it is not a Tensor with parameters to be updated
+                output.grad_to_parents[self] = dself(self.data)
 
         return output
     
