@@ -308,6 +308,44 @@ class Tensor:
             dself =     lambda s: np.sign(s),
             dother =    None
         )
+    
+    def __sum__(self):
+        # output = np.sum(self)
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: np.sum(s),
+            dself = lambda s: np.ones_like(s),
+            dother = None
+        )
+    
+    # Trig functions
+    def __sin__(self):
+        # output = sin(self)
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: np.sin(s),
+            dself = lambda s: np.cos(s),
+            dother = None
+        )
+
+    def __cos__(self):
+        # output = cos(self)
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: np.cos(s),
+            dself = lambda s: -np.sin(s),
+            dother = None
+        )
+
+    def __tan__(self):
+        # output = tan(self)
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: np.tan(s),
+            dself = lambda s: 1 / (np.cos(s)**2),
+            dother = None
+        )
+
     # endregion
 # endregion
 
