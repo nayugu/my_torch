@@ -377,7 +377,7 @@ class Tensor:
 
     def __softmax__(self):
         # output = Softmax(self)
-        if self.data.ndims >= 2:
+        if self.data.ndims > 2:
             raise ValueError("Softmax not supported for ndarrays currently. Please use a 1D or 2D input.")
         
         def forward(s):
