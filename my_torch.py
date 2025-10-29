@@ -349,19 +349,68 @@ class Tensor:
     # Common activation functions
     def __relu__(self):
         # output = ReLU(self)
-        pass
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: np.maximum(0,s),
+            dself = lambda s: (s > 0) * 1.0,
+            dother = None
+        )
+    
+    def __leaky_relu__(self, alpha=0.01):
+        # output = LeakyReLU(self)
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: np.maximum(alpha*s,s),
+            dself = lambda s: (s > 0) * 1.0 + alpha * (s <= 0),
+            dother = None
+        )
 
     def __sigmoid__(self):
         # output = Sigmoid(self)
-        pass
-
-    def __gelu__(self):
-        # output = GeLU(self)
-        pass
+        sigmoid = 1 / (1 + np.exp(-self.data))
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: sigmoid,
+            dself = lambda s: sigmoid * (1-sigmoid),
+            dother = None
+        )
 
     def __softmax__(self):
         # output = Softmax(self)
-        pass
+        if self.data.ndims >= 2:
+            raise ValueError("Softmax not supported for ndarrays currently. Please use a 1D or 2D input.")
+        
+        def forward(s):
+            s = np.squeeze(s)  # Remove singleton dimensions
+            
+            if s.ndim == 1:
+                s_shifted = s - np.max(s)
+                e = np.exp(s_shifted)
+                return e / np.sum(e)
+            else:  # ndim >= 2, treat first dim as batch
+                s_shifted = s - np.max(s, axis=-1, keepdims=True)
+                e = np.exp(s_shifted)
+                return e / np.sum(e, axis=-1, keepdims=True)
+            
+        def jacobian(s):
+            s = np.squeeze(s)
+            softmax_out = forward(s)
+            
+            if s.ndim == 1:
+                return np.diag(softmax_out) - np.outer(softmax_out, softmax_out)
+            else:
+                batch_size, n = softmax_out.shape
+                jac = np.zeros((batch_size, n, n))
+                for i in range(batch_size):
+                    jac[i] = np.diag(softmax_out[i]) - np.outer(softmax_out[i], softmax_out[i])
+                return jac
+
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: forward(s),
+            dself = lambda s: jacobian(s),
+            dother = None
+        )
 
     # endregion
 # endregion
