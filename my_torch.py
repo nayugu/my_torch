@@ -227,8 +227,8 @@ class Tensor:
         return self.calc_output_and_grad(
             other,
             operation = lambda s,o: s @ o,
-            dself =     lambda s,o: o.T,
-            dother =    lambda s,o: s.T
+            dself =     lambda s,o: o,
+            dother =    lambda s,o: s
         )
     # endregion
     
@@ -285,8 +285,8 @@ class Tensor:
         return self.calc_output_and_grad(
             other,
             operation = lambda s,o: o @ s,
-            dself =     lambda s,o: o.T,
-            dother =    lambda s,o: s.T
+            dself =     lambda s,o: o,
+            dother =    lambda s,o: s
         )
     # endregion
     
@@ -445,7 +445,7 @@ class Linear(Module):
 
         # Note to self: input_dim -> #rows, output_dim -> #columns
         self._w = Tensor(np.random.randn(flattened_in_dim,out_dim)/np.sqrt(flattened_in_dim))
-        self._b = Tensor(np.zeros((out_dim,1)))
+        self._b = Tensor(np.zeros((1,out_dim)))
     
     def forward(self,a_prev):
         """
@@ -453,7 +453,7 @@ class Linear(Module):
         # batch first because it is logical. E.g. x[0] gives the first batch
         a_prev: shape = (batch_size, in_dim)
         self._w: shape = (in_dim, out_dim)
-        self._b: shape = (out_dim)
+        self._b: shape = (1, out_dim)
 
         Output
         a: shape = (batch_size, out_dim)
@@ -462,7 +462,7 @@ class Linear(Module):
         if len(a_prev.shape) >= 3:
             batch_size = a_prev.shape[0]
             a_prev = a_prev.reshape(batch_size, -1)
-        return np.dot(a_prev,self._w) + self._b
+        return a_prev @ self._w + self._b
 
 class ReLU(Module):
     pass
