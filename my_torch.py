@@ -319,7 +319,7 @@ class Tensor:
         )
     
     # Trig functions
-    def __sin__(self):
+    def sin(self):
         # output = sin(self)
         return self.calc_output_and_grad(
             other=None,
@@ -328,7 +328,7 @@ class Tensor:
             dother = None
         )
 
-    def __cos__(self):
+    def cos(self):
         # output = cos(self)
         return self.calc_output_and_grad(
             other=None,
@@ -337,7 +337,7 @@ class Tensor:
             dother = None
         )
 
-    def __tan__(self):
+    def tan(self):
         # output = tan(self)
         return self.calc_output_and_grad(
             other=None,
@@ -347,7 +347,7 @@ class Tensor:
         )
     
     # Common activation functions
-    def __relu__(self):
+    def relu(self):
         # output = ReLU(self)
         return self.calc_output_and_grad(
             other=None,
@@ -356,7 +356,7 @@ class Tensor:
             dother = None
         )
     
-    def __leaky_relu__(self, alpha=0.01):
+    def leaky_relu(self, alpha=0.01):
         # output = LeakyReLU(self)
         return self.calc_output_and_grad(
             other=None,
@@ -365,7 +365,7 @@ class Tensor:
             dother = None
         )
 
-    def __sigmoid__(self):
+    def sigmoid(self):
         # output = Sigmoid(self)
         sigmoid = 1 / (1 + np.exp(-self.data))
         return self.calc_output_and_grad(
@@ -375,7 +375,7 @@ class Tensor:
             dother = None
         )
 
-    def __softmax__(self):
+    def softmax(self):
         # output = Softmax(self)
         if self.data.ndims > 2:
             raise ValueError("Softmax not supported for ndarrays currently. Please use a 1D or 2D input.")
