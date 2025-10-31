@@ -7,8 +7,8 @@ x = torch.Tensor([[2,3],
                   [4,5]], name='x', requires_grad=True)
 b = torch.Tensor([[-2,-2]], name='b', requires_grad=True)
 
-z = (w @ x) + b ; z.name = 'z'
-a = z.sigmoid() ; a.name = 'a'
+z = (w @ x) + b ; #z.name = 'z'
+a = z.sigmoid() ; #a.name = 'a'
 
 print(z)
 print(a)

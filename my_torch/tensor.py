@@ -8,11 +8,13 @@ np.set_printoptions(precision=3)
 
 # region Tensor data type
 class Tensor:
+    auto_name = True # By default, give all Tensors a name
     # Core methods
     def __init__(self, 
                  ndarray, 
                  name:Optional[str] = None,
-                 requires_grad = False): # Remember to set requires_grad to True by default for model parameters
+                 requires_grad = False
+                 ): # Remember to set requires_grad to True by default for model parameters
         
         if isinstance(ndarray,Tensor):
             self.data = ndarray.data
@@ -22,7 +24,7 @@ class Tensor:
                 ndarray = np.asarray(ndarray, dtype=np.float64)
             self.data = ndarray
         
-        self.name = name
+        self._name = name
         self.grad: Optional[np.ndarray] = None
         self.partial_d: dict[Tensor,np.ndarray] = {} # With respect to __: partial derivative of self
         self.requires_grad = requires_grad
@@ -111,23 +113,30 @@ class Tensor:
         return self.data
     
     def __str__(self):
-        if self.name != None:
-            name = self.name
+        if self._name != None:
+            name = self._name
         else:
             name = "data"
         return f"\n{name}\n{str(self.data)}\n\ngrad:\n{str(self.grad)}\n"
     
     def __repr__(self):
-        if self.name != None:
-            name = self.name
-        else:
-            name = type(self)
-        return f"Tensor '{name}' of shape {self.shape}"
+        return f"{self.name} of shape {self.shape}"
     
 
     @ property
     def shape(self):
         return self.data.shape
+    
+    @ property
+    def name(self):
+        if self._name:
+            return self._name
+        else:
+            return f"<T{self.data.shape}>"
+        
+    @ name.setter
+    def name(self,name:str):
+        self._name = str(name)
     
     # Methods to create automatic computation graphs
 
@@ -137,7 +146,8 @@ class Tensor:
             other: Optional[Tensor],
             operation: Callable, 
             dself: Callable,
-            dother: Callable
+            dother: Callable,
+            op_name: str # Name of operation. E.g. A+B
             ) -> Tensor:
         """Takes in inputs for an operation, then calculates the partial derivatives of the 
         operation output with respect to its inputs. Checks if other is a Tensor. 
@@ -185,9 +195,11 @@ class Tensor:
                 # Calculate partial derivatives.
                 output.partial_d[self] = dself(self.data,other) # np.ndarray
 
+        if Tensor.auto_name and output._name == None:
+            output._name = op_name
+        
         return output
     # endregion
-    
     
     # TODO: Create module objects when arithmatic operations are called for back propagation
     # region Arithmatic operations
@@ -197,7 +209,8 @@ class Tensor:
             other,
             operation = lambda s,o: s + o,
             dself =     lambda s,o: 1.,
-            dother =    lambda s,o: 1.
+            dother =    lambda s,o: 1.,
+            op_name = f'({self.name} + {other.name})'
         )
     
     def __sub__(self, other):
@@ -206,7 +219,8 @@ class Tensor:
             other,
             operation = lambda s,o: s - o,
             dself =     lambda s,o: 1.,
-            dother =    lambda s,o: -1.
+            dother =    lambda s,o: -1.,
+            op_name = f'({self.name} - {other.name})'
         )
         
     def __mul__(self, other):
@@ -215,7 +229,8 @@ class Tensor:
             other,
             operation = lambda s,o: s * o,
             dself =     lambda s,o: o,
-            dother =    lambda s,o: s
+            dother =    lambda s,o: s,
+            op_name = f'({self.name} * {other.name})'
         )
 
     def __truediv__(self, other):
@@ -224,7 +239,8 @@ class Tensor:
             other,
             operation = lambda s,o: s / o,
             dself =     lambda s,o: 1/o,
-            dother =    lambda s,o: s * -(o ** -2)
+            dother =    lambda s,o: s * -(o ** -2),
+            op_name = f'({self.name} / {other.name})'
         )
     
     def __pow__(self, other):
@@ -233,7 +249,8 @@ class Tensor:
             other,
             operation = lambda s,o: s ** o,
             dself =     lambda s,o: o * (s ** (o-1)),
-            dother =    lambda s,o: np.log(s) * s ** o
+            dother =    lambda s,o: np.log(s) * s ** o,
+            op_name = f'({self.name} ** {other.name})'
         )
     
     # TODO: Learn Matrix Calculus
@@ -245,7 +262,8 @@ class Tensor:
             other,
             operation = lambda s,o: s @ o,
             dself =     lambda s,o: o.T,
-            dother =    lambda s,o: s.T
+            dother =    lambda s,o: s.T,
+            op_name = f'({self.name} @ {other.name})'
         )
     # endregion
     
@@ -258,7 +276,8 @@ class Tensor:
             other,
             operation = lambda s,o: o + s,
             dself =     lambda s,o: 1.,
-            dother =    lambda s,o: 1.
+            dother =    lambda s,o: 1.,
+            op_name = f'({other.name} + {self.name}'
         )
     
     def __rsub__(self, other):
@@ -267,7 +286,8 @@ class Tensor:
             other,
             operation = lambda s,o: o - s,
             dself =     lambda s,o: -1.,
-            dother =    lambda s,o: 1.
+            dother =    lambda s,o: 1.,
+            op_name = f'({other.name} - {self.name})'
         )
         
     def __rmul__(self, other):
@@ -276,7 +296,8 @@ class Tensor:
             other,
             operation = lambda s,o: o * s,
             dself =     lambda s,o: o,
-            dother =    lambda s,o: s
+            dother =    lambda s,o: s,
+            op_name = f'({other.name} * {self.name})'
         )
 
     def __rtruediv__(self, other):
@@ -286,6 +307,7 @@ class Tensor:
             operation = lambda s,o: o / s,
             dself =     lambda s,o: o * -(s ** -2),
             dother =    lambda s,o: 1/s,
+            op_name = f'({other.name} / {self.name})'
         )
     
     def __rpow__(self, other):
@@ -295,6 +317,7 @@ class Tensor:
             operation = lambda s,o: o ** s,
             dself =     lambda s,o: np.log(o) * o ** s,
             dother =    lambda s,o: s * (o ** (s-1)),
+            op_name = f'({other.name} ** {self.name})'
         )
     
     def __rmatmul__(self, other):
@@ -306,7 +329,8 @@ class Tensor:
             other,
             operation = lambda s,o: o @ s,
             dself =     lambda s,o: o.T,
-            dother =    lambda s,o: s.T
+            dother =    lambda s,o: s.T,
+            op_name = f'({other.name} @ {self.name})'
         )
     
     # endregion
@@ -318,7 +342,8 @@ class Tensor:
             other=None,
             operation = lambda s: -s,
             dself =     lambda s: -1.,
-            dother =    None
+            dother =    None,
+            op_name = f'-{self.name}'
         )
     
     def __abs__(self):
@@ -327,7 +352,8 @@ class Tensor:
             other=None,
             operation = lambda s: np.abs(s),
             dself =     lambda s: np.sign(s),
-            dother =    None
+            dother =    None,
+            op_name = f'abs{self.name}'
         )
     
     def __sum__(self, axis=None):
@@ -336,7 +362,8 @@ class Tensor:
             other=None,
             operation=lambda s: np.sum(s,axis=axis),
             dself = lambda s: np.ones_like(s),
-            dother = None
+            dother = None,
+            op_name = f'sum({self.name},axis={axis})'
         )
     
     # Trig functions
@@ -346,7 +373,8 @@ class Tensor:
             other=None,
             operation=lambda s: np.sin(s),
             dself = lambda s: np.cos(s),
-            dother = None
+            dother = None,
+            op_name = f'{self.name}.sin()'
         )
 
     def cos(self):
@@ -355,7 +383,8 @@ class Tensor:
             other=None,
             operation=lambda s: np.cos(s),
             dself = lambda s: -np.sin(s),
-            dother = None
+            dother = None,
+            op_name = f'{self.name}.cos()'
         )
 
     def tan(self):
@@ -364,7 +393,8 @@ class Tensor:
             other=None,
             operation=lambda s: np.tan(s),
             dself = lambda s: 1 / (np.cos(s)**2),
-            dother = None
+            dother = None,
+            op_name = f'{self.name}.tan()'
         )
     
     # Common activation functions
@@ -374,7 +404,8 @@ class Tensor:
             other=None,
             operation=lambda s: np.maximum(0,s),
             dself = lambda s: (s > 0) * 1.0,
-            dother = None
+            dother = None,
+            op_name = f'{self.name}.relu()'
         )
     
     def leaky_relu(self, alpha=0.01):
@@ -383,7 +414,8 @@ class Tensor:
             other=None,
             operation=lambda s: np.maximum(alpha*s,s),
             dself = lambda s: (s > 0) * 1.0 + alpha * (s <= 0),
-            dother = None
+            dother = None,
+            op_name = f'{self.name}.leaky_relu()'
         )
 
     def sigmoid(self):
@@ -393,7 +425,8 @@ class Tensor:
             other=None,
             operation=lambda s: sigmoid,
             dself = lambda s: sigmoid * (1-sigmoid),
-            dother = None
+            dother = None,
+            op_name = f'{self.name}.sigmoid()'
         )
 
     def softmax(self):
@@ -430,7 +463,8 @@ class Tensor:
             other=None,
             operation=lambda s: forward(s),
             dself = lambda s: jacobian(s),
-            dother = None
+            dother = None,
+            op_name = f'{self.name}.softmax()'
         )
 
     # endregion
@@ -445,16 +479,11 @@ def print_partial_d(partial_d_dict):
         output = "\nPartial Derivatives\n"
         for tensor,partial_d in partial_d_dict.items():
             if tensor: # Not none
-                if tensor.name != None:
-                    name = tensor.name
-                else:
-                    name = type(tensor)
-
                 if isinstance(partial_d,np.ndarray) and len(partial_d) > 1:
                     next_line = "\n"
                 else:
                     next_line = ""
-                output += (f"{name}{tensor.data} : {next_line}{partial_d}\n\n")
+                output += (f"{tensor.name}{tensor.data} : {next_line}{partial_d}\n\n")
 
         print(output)
         return output
