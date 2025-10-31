@@ -8,7 +8,9 @@ np.set_printoptions(precision=3)
 
 # region Tensor data type
 class Tensor:
-    auto_name = True # By default, give all Tensors a name
+    # Class attributes
+    auto_name = False # By default, do not auto name Tensors
+
     # Core methods
     def __init__(self, 
                  ndarray, 
