@@ -113,14 +113,14 @@ class Tensor:
         return self.data
     
     def __str__(self):
-        if self._name != None:
-            name = self._name
-        else:
-            name = "data"
-        return f"\n\n{name}\n-----\ndata:\n{str(self.data)}\n-----\ngrad:\n{str(self.grad)}\n"
+        return f"\n\n{self.name}\n-----\ndata:\n{str(self.data)}\n-----\ngrad:\n{str(self.grad)}\n"
     
     def __repr__(self):
-        return f"{self.name} of shape {self.shape}"
+        if self._name == None:
+            name = ""
+        else:
+            name = self._name
+        return f"Tensor '{name}' of shape {self.shape}"
     
 
     @ property
