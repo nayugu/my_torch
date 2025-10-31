@@ -6,29 +6,6 @@ import numpy as np
 np.set_printoptions(precision=3)
 # end region
 
-# region Global Helper Methods
-def print_partial_d(partial_d_dict):
-        """
-        Prints the partial derivatives stored within a dictionary
-        """
-        output = "\nPartial Derivatives\n"
-        for tensor,partial_d in partial_d_dict.items():
-            if tensor: # Not none
-                if tensor.name != None:
-                    name = tensor.name
-                else:
-                    name = type(tensor)
-
-                if isinstance(partial_d,np.ndarray) and len(partial_d) > 1:
-                    next_line = "\n"
-                else:
-                    next_line = ""
-                output += (f"{name}{tensor.data} : {next_line}{partial_d}\n\n")
-
-        print(output)
-        return output
-# endregion
-
 # region Tensor data type
 class Tensor:
     # Core methods
@@ -134,7 +111,11 @@ class Tensor:
         return self.data
     
     def __str__(self):
-        return f"Tensor:\n{str(self.data)}\nGradients:{str(self.grad)}"
+        if self.name != None:
+            name = self.name
+        else:
+            name = "data"
+        return f"\n{name}\n{str(self.data)}\n\ngrad:\n{str(self.grad)}\n"
     
     def __repr__(self):
         if self.name != None:
@@ -453,4 +434,28 @@ class Tensor:
         )
 
     # endregion
+# endregion
+
+
+# region Global Helper Methods
+def print_partial_d(partial_d_dict):
+        """
+        Prints the partial derivatives stored within a dictionary
+        """
+        output = "\nPartial Derivatives\n"
+        for tensor,partial_d in partial_d_dict.items():
+            if tensor: # Not none
+                if tensor.name != None:
+                    name = tensor.name
+                else:
+                    name = type(tensor)
+
+                if isinstance(partial_d,np.ndarray) and len(partial_d) > 1:
+                    next_line = "\n"
+                else:
+                    next_line = ""
+                output += (f"{name}{tensor.data} : {next_line}{partial_d}\n\n")
+
+        print(output)
+        return output
 # endregion
