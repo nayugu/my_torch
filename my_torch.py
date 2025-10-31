@@ -68,7 +68,7 @@ class Tensor:
     
     # region Calculus
     def recursive_chain_rule(node: Tensor,
-                            leaves: dict[Tensor,np.ndarray] = {}, accumulated_grad=1):
+                            leaves: dict[Tensor,np.ndarray] = {}, accumulated_grad=1.0):
         if leaves is None:
             leaves: dict[Tensor,np.ndarray] = {}
             
@@ -78,14 +78,18 @@ class Tensor:
             for sub_node, d_sub_node in node.partial_d.items():
                 # Current node was created through matrix multiplication
                 if sub_node._left_matmul:
-                    if isinstance(accumulated_grad,int): # =1
+                    if isinstance(accumulated_grad,float) or \
+                        isinstance(accumulated_grad,np.float64): # =1.0
+                        
                         ones_shape = list(sub_node.shape) # [..., rows, cols]
                         ones_shape[-1] = sub_node._left_matmul  # Last dim matches the contracted dimension, i.e. cols
                         accumulated_grad = np.ones(shape=tuple(ones_shape))
                     new_accumulated_grad =accumulated_grad @ d_sub_node
 
                 elif sub_node._right_matmul:
-                    if isinstance(accumulated_grad,int): # =1
+                    if isinstance(accumulated_grad,float) or \
+                        isinstance(accumulated_grad,np.float64): # =1.0
+                        
                         ones_shape = list(sub_node.shape) # [..., rows, cols]
                         ones_shape[-2] = sub_node._right_matmul  # Second-to-last dim matches contracted dimension, i.e. rows
                         accumulated_grad = np.ones(shape=tuple(ones_shape))
@@ -140,6 +144,13 @@ class Tensor:
     
     def __str__(self):
         return f"Tensor:\n{str(self.data)}\nGradients:{str(self.grad)}"
+    
+    def __repr__(self):
+        if self.name != None:
+            name = self.name
+        else:
+            name = type(self)
+        return f"Tensor '{name}' of shape {self.shape}"
     
 
     @ property
