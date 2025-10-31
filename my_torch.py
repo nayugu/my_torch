@@ -11,6 +11,10 @@ import numpy as np
 
 # endregion
 
+# region Settings
+np.set_printoptions(precision=1)
+# end region
+
 # region Global Helper Methods
 def print_partial_d(partial_d_dict):
         """
@@ -24,7 +28,7 @@ def print_partial_d(partial_d_dict):
                 else:
                     name = type(tensor)
 
-                if len(partial_d) > 1:
+                if isinstance(partial_d,np.ndarray) and len(partial_d) > 1:
                     next_line = "\n"
                 else:
                     next_line = ""
