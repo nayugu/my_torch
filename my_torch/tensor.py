@@ -1,0 +1,456 @@
+from __future__ import annotations
+from typing import Callable, Optional
+import numpy as np
+
+# region Settings
+np.set_printoptions(precision=3)
+# end region
+
+# region Global Helper Methods
+def print_partial_d(partial_d_dict):
+        """
+        Prints the partial derivatives stored within a dictionary
+        """
+        output = "\nPartial Derivatives\n"
+        for tensor,partial_d in partial_d_dict.items():
+            if tensor: # Not none
+                if tensor.name != None:
+                    name = tensor.name
+                else:
+                    name = type(tensor)
+
+                if isinstance(partial_d,np.ndarray) and len(partial_d) > 1:
+                    next_line = "\n"
+                else:
+                    next_line = ""
+                output += (f"{name}{tensor.data} : {next_line}{partial_d}\n\n")
+
+        print(output)
+        return output
+# endregion
+
+# region Tensor data type
+class Tensor:
+    # Core methods
+    def __init__(self, 
+                 ndarray, 
+                 name:Optional[str] = None,
+                 requires_grad = False): # Remember to set requires_grad to True by default for model parameters
+        
+        if isinstance(ndarray,Tensor):
+            self.data = ndarray.data
+        
+        else:
+            if not isinstance(ndarray,np.ndarray):
+                ndarray = np.asarray(ndarray, dtype=np.float64)
+            self.data = ndarray
+        
+        self.name = name
+        self.grad: Optional[np.ndarray] = None
+        self.partial_d: dict[Tensor,np.ndarray] = {} # With respect to __: partial derivative of self
+        self.requires_grad = requires_grad
+
+        # Used to check when to apply matrix multiplication for chain rule
+        # and then store the dimension to broadcast across
+        self._left_matmul:Optional[int] = None 
+        self._right_matmul:Optional[int] = None
+
+    # TODO: Use slicing and views to enable converging outputs to slice the gradient in back prop
+    
+    # region Calculus
+    def recursive_chain_rule(node: Tensor,
+                            leaves: dict[Tensor,np.ndarray] = {}, accumulated_grad=1.0):
+        if leaves is None:
+            leaves: dict[Tensor,np.ndarray] = {}
+            
+        if node.partial_d == {}:
+            return node
+        else:
+            for sub_node, d_sub_node in node.partial_d.items():
+                # Current node was created through matrix multiplication
+                if sub_node._left_matmul:
+                    if isinstance(accumulated_grad,float) or \
+                        isinstance(accumulated_grad,np.float64): # =1.0
+                        
+                        ones_shape = list(sub_node.shape) # [..., rows, cols]
+                        ones_shape[-1] = sub_node._left_matmul  # Last dim matches the contracted dimension, i.e. cols
+                        accumulated_grad = np.ones(shape=tuple(ones_shape))
+                    new_accumulated_grad =accumulated_grad @ d_sub_node
+
+                elif sub_node._right_matmul:
+                    if isinstance(accumulated_grad,float) or \
+                        isinstance(accumulated_grad,np.float64): # =1.0
+                        
+                        ones_shape = list(sub_node.shape) # [..., rows, cols]
+                        ones_shape[-2] = sub_node._right_matmul  # Second-to-last dim matches contracted dimension, i.e. rows
+                        accumulated_grad = np.ones(shape=tuple(ones_shape))
+                    new_accumulated_grad = d_sub_node @ accumulated_grad
+
+                else:
+                    new_accumulated_grad = accumulated_grad * d_sub_node
+
+                leaf = sub_node.recursive_chain_rule(leaves=leaves,
+                                                     accumulated_grad=new_accumulated_grad)
+                if leaf in leaves:
+                    leaves[leaf] += new_accumulated_grad
+                else:
+                    leaves[leaf] = new_accumulated_grad
+        
+    def backward(self):
+        leaves: dict[Tensor,np.ndarray] = {}
+        self.recursive_chain_rule(leaves=leaves)
+        if None in leaves: del leaves[None]
+
+        result = {leaf: grad.copy() if isinstance(grad, np.ndarray)
+                  else grad for leaf, grad in leaves.items()}
+
+        for leaf,leaf_grad in leaves.items():
+            leaf.receive_grad(leaf_grad)
+
+        return result
+    
+    def receive_grad(self,grad):
+        """Method called to receive gradient"""
+        if self.requires_grad:
+            if self.grad is None:
+                self.grad = grad
+            else:
+                if (isinstance(grad,np.float64) or
+                    isinstance(grad,float) or
+                    grad.shape == self.grad.shape):
+                    self.grad += grad
+                else:
+                    raise ValueError("Shape of incoming gradient does not matching existing gradient.")
+    
+
+    def zero_grad(self):
+        """Clear gradients."""
+        self.grad = None
+    # endregion
+
+    # region Helper Methods
+    def __array__(self):
+        """Enable direct call by NumPy methods"""
+        return self.data
+    
+    def __str__(self):
+        return f"Tensor:\n{str(self.data)}\nGradients:{str(self.grad)}"
+    
+    def __repr__(self):
+        if self.name != None:
+            name = self.name
+        else:
+            name = type(self)
+        return f"Tensor '{name}' of shape {self.shape}"
+    
+
+    @ property
+    def shape(self):
+        return self.data.shape
+    
+    # Methods to create automatic computation graphs
+
+    # Helper method to reduce boilerplate code
+    def calc_output_and_grad(
+            self: Tensor,
+            other: Optional[Tensor],
+            operation: Callable, 
+            dself: Callable,
+            dother: Callable
+            ) -> Tensor:
+        """Takes in inputs for an operation, then calculates the partial derivatives of the 
+        operation output with respect to its inputs. Checks if other is a Tensor. 
+        If so, then the operation uses self.data and other.data,
+        and both self.partial_d and other.partial_d are updated. 
+        If other is not a Tensor, the operation uses other directly in the operation
+        and only self.partial_d is updated.
+
+        Args:
+            self: Tensor
+            other: Tensor
+            operation: Callable - func(self, other) -> operation_output
+            dself: Callable - func(self, other) -> d_operation_output / d_self
+            dother: Callable - func(self, other) -> d_operation_output / d_other
+
+        Example:
+        calc_output_and_grad(
+            self = Tensor[...]\n
+            other = Tensor[...]\n
+            operation = lambda s,o: s * o\n
+            dself = lambda s,o: o\n
+            dother = lambda s,o: s\n
+            )
+        """
+
+        if isinstance(other, Tensor): # If other is a Tensor
+            output = Tensor(operation(self.data,other.data)) # Operation output
+
+            # Calculate partial derivatives. E.g. z = w * x
+            output.partial_d[self] = dself(self.data,other.data)  # dzdw, np.ndarray
+            output.partial_d[other] = dother(self.data,other.data) # dzdx, np.ndarray
+        
+        else: # If other is NOT a Tensor
+
+            if other is None: # If it is a unitary operation
+                output = Tensor(operation(self.data))
+
+                # Calculate partial derivatives.
+                output.partial_d[self] = dself(self.data) # np.ndarray
+            
+
+            else: # Non-unitary operation
+                output = Tensor(operation(self.data,other)) # Operation output (use other directly)
+
+                # Calculate partial derivatives.
+                output.partial_d[self] = dself(self.data,other) # np.ndarray
+
+        return output
+    # endregion
+    
+    
+    # TODO: Create module objects when arithmatic operations are called for back propagation
+    # region Arithmatic operations
+    def __add__(self, other):
+        # output = self + other
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s + o,
+            dself =     lambda s,o: 1.,
+            dother =    lambda s,o: 1.
+        )
+    
+    def __sub__(self, other):
+        # output = self - other
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s - o,
+            dself =     lambda s,o: 1.,
+            dother =    lambda s,o: -1.
+        )
+        
+    def __mul__(self, other):
+        # output = self * other
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s * o,
+            dself =     lambda s,o: o,
+            dother =    lambda s,o: s
+        )
+
+    def __truediv__(self, other):
+        # output = self / other = self * (other ** -1)
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s / o,
+            dself =     lambda s,o: 1/o,
+            dother =    lambda s,o: s * -(o ** -2)
+        )
+    
+    def __pow__(self, other):
+        # output = self ** other
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s ** o,
+            dself =     lambda s,o: o * (s ** (o-1)),
+            dother =    lambda s,o: np.log(s) * s ** o
+        )
+    
+    # TODO: Learn Matrix Calculus
+    def __matmul__(self, other):
+        # output = self @ other
+        self._left_matmul = other.shape[1]
+        other._right_matmul = self.shape[0]
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: s @ o,
+            dself =     lambda s,o: o.T,
+            dother =    lambda s,o: s.T
+        )
+    # endregion
+    
+    # region Reversed order arithmatic operations. E.g. a + b vs. b + a
+    # Only activates if other is NOT a Tensor, because then other.__<operation>__() fails, 
+    # so then Python checks self.__r<operation>__()
+    def __radd__(self, other):
+        # output = other + self
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: o + s,
+            dself =     lambda s,o: 1.,
+            dother =    lambda s,o: 1.
+        )
+    
+    def __rsub__(self, other):
+        # output = other - self
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: o - s,
+            dself =     lambda s,o: -1.,
+            dother =    lambda s,o: 1.
+        )
+        
+    def __rmul__(self, other):
+        # output = other * self
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: o * s,
+            dself =     lambda s,o: o,
+            dother =    lambda s,o: s
+        )
+
+    def __rtruediv__(self, other):
+        # output = other / self = other * (self ** -1)
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: o / s,
+            dself =     lambda s,o: o * -(s ** -2),
+            dother =    lambda s,o: 1/s,
+        )
+    
+    def __rpow__(self, other):
+        # output = other ** self
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: o ** s,
+            dself =     lambda s,o: np.log(o) * o ** s,
+            dother =    lambda s,o: s * (o ** (s-1)),
+        )
+    
+    def __rmatmul__(self, other):
+        # output = other @ self
+        other._left_matmul = self.shape[1]
+        self._right_matmul = other.shape[0]
+
+        return self.calc_output_and_grad(
+            other,
+            operation = lambda s,o: o @ s,
+            dself =     lambda s,o: o.T,
+            dother =    lambda s,o: s.T
+        )
+    
+    # endregion
+    
+    # region Unitary operations
+    def __neg__(self):
+        # output = -self
+        return self.calc_output_and_grad(
+            other=None,
+            operation = lambda s: -s,
+            dself =     lambda s: -1.,
+            dother =    None
+        )
+    
+    def __abs__(self):
+        # output = |self| = np.abs(self)
+        return self.calc_output_and_grad(
+            other=None,
+            operation = lambda s: np.abs(s),
+            dself =     lambda s: np.sign(s),
+            dother =    None
+        )
+    
+    def __sum__(self, axis=None):
+        # output = np.sum(self)
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: np.sum(s,axis=axis),
+            dself = lambda s: np.ones_like(s),
+            dother = None
+        )
+    
+    # Trig functions
+    def sin(self):
+        # output = sin(self)
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: np.sin(s),
+            dself = lambda s: np.cos(s),
+            dother = None
+        )
+
+    def cos(self):
+        # output = cos(self)
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: np.cos(s),
+            dself = lambda s: -np.sin(s),
+            dother = None
+        )
+
+    def tan(self):
+        # output = tan(self)
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: np.tan(s),
+            dself = lambda s: 1 / (np.cos(s)**2),
+            dother = None
+        )
+    
+    # Common activation functions
+    def relu(self):
+        # output = ReLU(self)
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: np.maximum(0,s),
+            dself = lambda s: (s > 0) * 1.0,
+            dother = None
+        )
+    
+    def leaky_relu(self, alpha=0.01):
+        # output = LeakyReLU(self)
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: np.maximum(alpha*s,s),
+            dself = lambda s: (s > 0) * 1.0 + alpha * (s <= 0),
+            dother = None
+        )
+
+    def sigmoid(self):
+        # output = Sigmoid(self)
+        sigmoid = 1 / (1 + np.exp(-self.data))
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: sigmoid,
+            dself = lambda s: sigmoid * (1-sigmoid),
+            dother = None
+        )
+
+    def softmax(self):
+        # output = Softmax(self)
+        if self.data.ndim > 2:
+            raise ValueError("Softmax not supported for ndarrays currently. Please use a 1D or 2D input.")
+        
+        def forward(s):
+            s = np.squeeze(s)  # Remove singleton dimensions
+            
+            if s.ndim == 1:
+                s_shifted = s - np.max(s)
+                e = np.exp(s_shifted)
+                return e / np.sum(e)
+            else:  # ndim >= 2, treat first dim as batch
+                s_shifted = s - np.max(s, axis=-1, keepdims=True)
+                e = np.exp(s_shifted)
+                return e / np.sum(e, axis=-1, keepdims=True)
+            
+        def jacobian(s):
+            s = np.squeeze(s)
+            softmax_out = forward(s)
+            
+            if s.ndim == 1:
+                return np.diag(softmax_out) - np.outer(softmax_out, softmax_out)
+            else:
+                batch_size, n = softmax_out.shape
+                jac = np.zeros((batch_size, n, n))
+                for i in range(batch_size):
+                    jac[i] = np.diag(softmax_out[i]) - np.outer(softmax_out[i], softmax_out[i])
+                return jac
+
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: forward(s),
+            dself = lambda s: jacobian(s),
+            dother = None
+        )
+
+    # endregion
+# endregion

@@ -1,6 +1,6 @@
 import sys
 sys.path.append("../my_torch")
-from my_torch import *
+from my_torch.nn import *
 
 a = Tensor([2],requires_grad=True)
 b = Tensor([3],requires_grad=True)
