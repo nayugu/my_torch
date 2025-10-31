@@ -117,7 +117,7 @@ class Tensor:
             name = self._name
         else:
             name = "data"
-        return f"\n{name}\n{str(self.data)}\n\ngrad:\n{str(self.grad)}\n"
+        return f"\n\n{name}\n-----\ndata:\n{str(self.data)}\n-----\ngrad:\n{str(self.grad)}\n"
     
     def __repr__(self):
         return f"{self.name} of shape {self.shape}"
