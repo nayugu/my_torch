@@ -59,7 +59,10 @@ class Tensor:
         self.partial_d: dict[Tensor,np.ndarray] = {} # With respect to __: partial derivative of self
         self.requires_grad = requires_grad
 
-        self._matmul = False # Used in backprop to know when to apply dot product
+        # Used to check when to apply matrix multiplication for chain rule
+        # and then store the dimension to broadcast across
+        self._left_matmul:Optional[int] = None 
+        self._right_matmul:Optional[int] = None
 
     # TODO: Use slicing and views to enable converging outputs to slice the gradient in back prop
     
@@ -74,11 +77,19 @@ class Tensor:
         else:
             for sub_node, d_sub_node in node.partial_d.items():
                 # Current node was created through matrix multiplication
-                if node._matmul:
-                    if accumulated_grad == 1:
-                        new_accumulated_grad = d_sub_node
-                    else:
-                        new_accumulated_grad = accumulated_grad @ d_sub_node
+                if sub_node._left_matmul:
+                    if isinstance(accumulated_grad,int): # =1
+                        ones_shape = list(sub_node.shape) # [..., rows, cols]
+                        ones_shape[-1] = sub_node._left_matmul  # Last dim matches the contracted dimension, i.e. cols
+                        accumulated_grad = np.ones(shape=tuple(ones_shape))
+                    new_accumulated_grad =accumulated_grad @ d_sub_node
+
+                elif sub_node._right_matmul:
+                    if isinstance(accumulated_grad,int): # =1
+                        ones_shape = list(sub_node.shape) # [..., rows, cols]
+                        ones_shape[-2] = sub_node._right_matmul  # Second-to-last dim matches contracted dimension, i.e. rows
+                        accumulated_grad = np.ones(shape=tuple(ones_shape))
+                    new_accumulated_grad = d_sub_node @ accumulated_grad
 
                 else:
                     new_accumulated_grad = accumulated_grad * d_sub_node
@@ -245,14 +256,14 @@ class Tensor:
     # TODO: Learn Matrix Calculus
     def __matmul__(self, other):
         # output = self @ other
-        output =  self.calc_output_and_grad(
+        self._left_matmul = other.shape[1]
+        other._right_matmul = self.shape[0]
+        return self.calc_output_and_grad(
             other,
             operation = lambda s,o: s @ o,
             dself =     lambda s,o: o.T,
             dother =    lambda s,o: s.T
         )
-        output._matmul = True
-        return output
     # endregion
     
     # region Reversed order arithmatic operations. E.g. a + b vs. b + a
@@ -305,14 +316,15 @@ class Tensor:
     
     def __rmatmul__(self, other):
         # output = other @ self
-        output = self.calc_output_and_grad(
+        other._left_matmul = self.shape[1]
+        self._right_matmul = other.shape[0]
+
+        return self.calc_output_and_grad(
             other,
             operation = lambda s,o: o @ s,
             dself =     lambda s,o: o.T,
             dother =    lambda s,o: s.T
         )
-        output._matmul = True
-        return output
     
     # endregion
     
