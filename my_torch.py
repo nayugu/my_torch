@@ -23,7 +23,13 @@ def print_partial_d(partial_d_dict):
                     name = tensor.name
                 else:
                     name = type(tensor)
-                output += (f"{name}{tensor.data} : {partial_d}\n")
+
+                if len(partial_d) > 1:
+                    next_line = "\n"
+                else:
+                    next_line = ""
+                output += (f"{name}{tensor.data} : {next_line}{partial_d}\n\n")
+
         print(output)
         return output
 # endregion
@@ -49,6 +55,8 @@ class Tensor:
         self.partial_d: dict[Tensor,np.ndarray] = {} # With respect to __: partial derivative of self
         self.requires_grad = requires_grad
 
+        self._matmul = False # Used in backprop to know when to apply dot product
+
     # TODO: Use slicing and views to enable converging outputs to slice the gradient in back prop
     
     # region Calculus
@@ -61,7 +69,16 @@ class Tensor:
             return node
         else:
             for sub_node, d_sub_node in node.partial_d.items():
-                new_accumulated_grad = accumulated_grad * d_sub_node
+                # Current node was created through matrix multiplication
+                if node._matmul:
+                    if accumulated_grad == 1:
+                        new_accumulated_grad = d_sub_node
+                    else:
+                        new_accumulated_grad = accumulated_grad @ d_sub_node
+
+                else:
+                    new_accumulated_grad = accumulated_grad * d_sub_node
+
                 leaf = sub_node.recursive_chain_rule(leaves=leaves,
                                                      accumulated_grad=new_accumulated_grad)
                 if leaf in leaves:
@@ -72,7 +89,7 @@ class Tensor:
     def backward(self):
         leaves: dict[Tensor,np.ndarray] = {}
         self.recursive_chain_rule(leaves=leaves)
-        del leaves[None]
+        if None in leaves: del leaves[None]
 
         result = {leaf: grad.copy() if isinstance(grad, np.ndarray)
                   else grad for leaf, grad in leaves.items()}
@@ -224,12 +241,14 @@ class Tensor:
     # TODO: Learn Matrix Calculus
     def __matmul__(self, other):
         # output = self @ other
-        return self.calc_output_and_grad(
+        output =  self.calc_output_and_grad(
             other,
             operation = lambda s,o: s @ o,
-            dself =     lambda s,o: o,
-            dother =    lambda s,o: s
+            dself =     lambda s,o: o.T,
+            dother =    lambda s,o: s.T
         )
+        output._matmul = True
+        return output
     # endregion
     
     # region Reversed order arithmatic operations. E.g. a + b vs. b + a
@@ -282,12 +301,15 @@ class Tensor:
     
     def __rmatmul__(self, other):
         # output = other @ self
-        return self.calc_output_and_grad(
+        output = self.calc_output_and_grad(
             other,
             operation = lambda s,o: o @ s,
-            dself =     lambda s,o: o,
-            dother =    lambda s,o: s
+            dself =     lambda s,o: o.T,
+            dother =    lambda s,o: s.T
         )
+        output._matmul = True
+        return output
+    
     # endregion
     
     # region Unitary operations
