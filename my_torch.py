@@ -12,7 +12,7 @@ import numpy as np
 # endregion
 
 # region Settings
-np.set_printoptions(precision=1)
+np.set_printoptions(precision=3)
 # end region
 
 # region Global Helper Methods
@@ -426,7 +426,7 @@ class Tensor:
 
     def softmax(self):
         # output = Softmax(self)
-        if self.data.ndims > 2:
+        if self.data.ndim > 2:
             raise ValueError("Softmax not supported for ndarrays currently. Please use a 1D or 2D input.")
         
         def forward(s):
