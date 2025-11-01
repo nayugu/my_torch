@@ -491,7 +491,8 @@ def print_partial_d(partial_d_dict):
         print(output)
         return output
 
-def concise(str:str):
+def concise(str:str,
+            replace_symbol:str="..."):
     """
     Returns a more concise version of an equation with nested parenthesis
     by eliminating all parenthesis after a certain depth.
@@ -506,7 +507,7 @@ def concise(str:str):
             #stack.append(depth)
 
             if depth == max_depth + 1:
-                content += "?"
+                content += replace_symbol
 
         elif str[i] == ")":
             depth -= 1
