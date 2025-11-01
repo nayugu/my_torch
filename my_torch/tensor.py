@@ -509,12 +509,12 @@ def concise(str:str,
             if depth == max_depth + 1:
                 content += replace_symbol
 
-        elif str[i] == ")":
-            depth -= 1
-            #stack.pop()
-
         if depth <= max_depth:
             content += str[i]
+
+        if str[i] == ")":
+            depth -= 1
+            #stack.pop()
 
         #print(stack,10*" ",str[:i+1],10*" ",content)
     return content
