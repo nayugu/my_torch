@@ -402,7 +402,7 @@ class Tensor:
             op_name = f'{self.name}.tan'
         )
     
-    # Common activation functions
+    # region Activation Functions
     def relu(self):
         # output = ReLU(self)
         return self.calc_output_and_grad(
@@ -471,8 +471,9 @@ class Tensor:
             dother = None,
             op_name = f'{self.name}.softmax'
         )
+    # endregion
     
-    # Common cost functions
+    # region Loss Functions
     def mean_squared_error_loss(predictions,targets):
         n = predictions.data.size
         return predictions.calc_output_and_grad(
@@ -502,7 +503,6 @@ class Tensor:
             dother =    lambda p,t: (-np.log(p+residual) + np.log(1-p+residual)) / n,
             op_name = f'BCE_Loss({predictions.name},{targets.name})'
         )
-
     # endregion
 # endregion
 
