@@ -469,6 +469,35 @@ class Tensor:
             dother = None,
             op_name = f'{self.name}.softmax'
         )
+    
+    # Common cost functions
+    def mean_squared_error_loss(predictions,targets):
+        n = predictions.data.size
+        return predictions.calc_output_and_grad(
+            other=targets,
+            operation = lambda p,t: np.sum((p - t) ** 2) / (2 * n),
+            dself =     lambda p,t: (p - t) / n,
+            dother =    lambda p,t: -(p - t) / n,
+            op_name = f'MSE_Loss({predictions.name},{targets.name})'
+        )
+
+    def cross_entropy_loss(predictions,targets):
+        return predictions.calc_output_and_grad(
+            other=targets,
+            operation = lambda p,t: None,
+            dself =     lambda p,t: None,
+            dother =    lambda p,t: None,
+            op_name = f'CE_Loss({predictions.name},{targets.name})'
+        )
+
+    def binary_cross_entropy_loss(predictions,targets):
+        return predictions.calc_output_and_grad(
+            other=targets,
+            operation = lambda p,t: None,
+            dself =     lambda p,t: None,
+            dother =    lambda p,t: None,
+            op_name = f'BCE_Loss({predictions.name},{targets.name})'
+        )
 
     # endregion
 # endregion

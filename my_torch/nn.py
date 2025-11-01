@@ -12,7 +12,7 @@ from .tensor import Tensor, print_partial_d
 
 # region Settings
 np.set_printoptions(precision=3)
-# end region
+# endregion
 
 # region Module
 class Module(ABC):
