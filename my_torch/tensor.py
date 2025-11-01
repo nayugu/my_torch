@@ -10,6 +10,7 @@ np.set_printoptions(precision=3)
 class Tensor:
     # Class attributes
     auto_name = False # By default, do not auto name Tensors
+    equation_precision = 3
 
     # Core methods
     def __init__(self, 
@@ -489,4 +490,9 @@ def print_partial_d(partial_d_dict):
 
         print(output)
         return output
+
+# TODO: Create recursive method for shortening equations
+def concise(str):
+    pass
+
 # endregion
