@@ -3,14 +3,14 @@ from typing import Callable, Optional
 import numpy as np
 
 # region Settings
-np.set_printoptions(precision=3)
+np.set_printoptions(precision=2)
 # end region
 
 # region Tensor data type
 class Tensor:
     # Class attributes
     auto_name = False # By default, do not auto name Tensors
-    equation_precision = 3
+    equation_precision = 2
 
     # Core methods
     def __init__(self, 
@@ -496,7 +496,7 @@ def concise(str:str):
     Returns a more concise version of an equation with nested parenthesis
     by eliminating all parenthesis after a certain depth.
     """
-    max_depth = Tensor.equation_precision
+    max_depth = Tensor.equation_precision # E.g. (5 + (4 - ?))) is ok, but (5 + (4 - (?) * ?)))) is not
     depth = 0
     content = ""
     #stack = []
