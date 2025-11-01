@@ -3,7 +3,7 @@ from typing import Callable, Optional
 import numpy as np
 
 # region Settings
-np.set_printoptions(precision=2)
+np.set_printoptions(precision=3)
 # end region
 
 # region Tensor data type
@@ -346,7 +346,7 @@ class Tensor:
             operation = lambda s: -s,
             dself =     lambda s: -1.,
             dother =    None,
-            op_name = f'-{self.name}'
+            op_name = f'(-{self.name})'
         )
     
     def __abs__(self):
@@ -356,7 +356,7 @@ class Tensor:
             operation = lambda s: np.abs(s),
             dself =     lambda s: np.sign(s),
             dother =    None,
-            op_name = f'abs{self.name}'
+            op_name = f'abs({self.name})'
         )
     
     def __sum__(self, axis=None):
@@ -377,7 +377,7 @@ class Tensor:
             operation=lambda s: np.sin(s),
             dself = lambda s: np.cos(s),
             dother = None,
-            op_name = f'{self.name}.sin()'
+            op_name = f'{self.name}.sin'
         )
 
     def cos(self):
@@ -387,7 +387,7 @@ class Tensor:
             operation=lambda s: np.cos(s),
             dself = lambda s: -np.sin(s),
             dother = None,
-            op_name = f'{self.name}.cos()'
+            op_name = f'{self.name}.cos'
         )
 
     def tan(self):
@@ -397,7 +397,7 @@ class Tensor:
             operation=lambda s: np.tan(s),
             dself = lambda s: 1 / (np.cos(s)**2),
             dother = None,
-            op_name = f'{self.name}.tan()'
+            op_name = f'{self.name}.tan'
         )
     
     # Common activation functions
@@ -408,7 +408,7 @@ class Tensor:
             operation=lambda s: np.maximum(0,s),
             dself = lambda s: (s > 0) * 1.0,
             dother = None,
-            op_name = f'{self.name}.relu()'
+            op_name = f'{self.name}.relu'
         )
     
     def leaky_relu(self, alpha=0.01):
@@ -418,7 +418,7 @@ class Tensor:
             operation=lambda s: np.maximum(alpha*s,s),
             dself = lambda s: (s > 0) * 1.0 + alpha * (s <= 0),
             dother = None,
-            op_name = f'{self.name}.leaky_relu()'
+            op_name = f'{self.name}.leaky_relu'
         )
 
     def sigmoid(self):
@@ -429,7 +429,7 @@ class Tensor:
             operation=lambda s: sigmoid,
             dself = lambda s: sigmoid * (1-sigmoid),
             dother = None,
-            op_name = f'{self.name}.sigmoid()'
+            op_name = f'{self.name}.sigmoid'
         )
 
     def softmax(self):
@@ -467,7 +467,7 @@ class Tensor:
             operation=lambda s: forward(s),
             dself = lambda s: jacobian(s),
             dother = None,
-            op_name = f'{self.name}.softmax()'
+            op_name = f'{self.name}.softmax'
         )
 
     # endregion
