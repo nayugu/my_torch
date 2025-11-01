@@ -13,6 +13,11 @@ x = a * b * c * d
 y = a + b + c + d
 z = a.sin() + b.cos() + c ** d
 
+# Comment this part to test auto-naming
+x.name = 'x'
+y.name = 'y'
+z.name = 'z'
+
 print(x)
 print(y)
 print(z)
