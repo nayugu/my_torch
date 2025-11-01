@@ -491,8 +491,31 @@ def print_partial_d(partial_d_dict):
         print(output)
         return output
 
-# TODO: Create recursive method for shortening equations
-def concise(str):
-    pass
+def concise(str:str):
+    """
+    Returns a more concise version of an equation with nested parenthesis
+    by eliminating all parenthesis after a certain depth.
+    """
+    max_depth = Tensor.equation_precision
+    depth = 0
+    content = ""
+    #stack = []
+    for i in range(len(str)):
+        if str[i] == "(":
+            depth += 1
+            #stack.append(depth)
+
+            if depth == max_depth + 1:
+                content += "?"
+
+        elif str[i] == ")":
+            depth -= 1
+            #stack.pop()
+
+        if depth <= max_depth:
+            content += str[i]
+
+        #print(stack,10*" ",str[:i+1],10*" ",content)
+    return content
 
 # endregion
