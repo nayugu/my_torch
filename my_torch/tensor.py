@@ -137,7 +137,7 @@ class Tensor:
         if self._name:
             return self._name
         else:
-            return f"<T{self.data.shape}>"
+            return f"<Tensor{self.data.shape}>"
         
     @ name.setter
     def name(self,name:str):
