@@ -481,21 +481,23 @@ class Tensor:
             op_name = f'MSE_Loss({predictions.name},{targets.name})'
         )
 
-    def cross_entropy_loss(predictions,targets):
+    def cross_entropy_loss(predictions,targets,residual = 1e-7):
+        n = predictions.data.size
         return predictions.calc_output_and_grad(
             other=targets,
-            operation = lambda p,t: None,
-            dself =     lambda p,t: None,
-            dother =    lambda p,t: None,
+            operation = lambda p,t: np.sum(t*-np.log(p+residual)) / n,
+            dself =     lambda p,t: -t/(p+residual) / n,
+            dother =    lambda p,t: -np.log(p+residual) / n,
             op_name = f'CE_Loss({predictions.name},{targets.name})'
         )
 
-    def binary_cross_entropy_loss(predictions,targets):
+    def binary_cross_entropy_loss(predictions,targets,residual = 1e-7):
+        n = predictions.data.size
         return predictions.calc_output_and_grad(
             other=targets,
-            operation = lambda p,t: None,
-            dself =     lambda p,t: None,
-            dother =    lambda p,t: None,
+            operation = lambda p,t: np.sum(t*-np.log(p+residual) + (1-t)*-np.log(1-p+residual)) / n,
+            dself =     lambda p,t: (-t/(p+residual) + (1-t)/(1-p+residual)) / n,
+            dother =    lambda p,t: (-np.log(p+residual) + np.log(1-p+residual)) / n,
             op_name = f'BCE_Loss({predictions.name},{targets.name})'
         )
 
