@@ -199,7 +199,7 @@ class Tensor:
                 output.partial_d[self] = dself(self.data,other) # np.ndarray
 
         if Tensor.auto_name and output._name == None:
-            output._name = op_name
+            output._name = concise(op_name)
         
         return output
     # endregion
