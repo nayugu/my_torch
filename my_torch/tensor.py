@@ -16,7 +16,7 @@ class Tensor:
     def __init__(self, 
                  ndarray, 
                  name:Optional[str] = None,
-                 requires_grad = False
+                 requires_grad = False # Do not update gradients by default to save memory
                  ): # Remember to set requires_grad to True by default for model parameters
         
         if isinstance(ndarray,Tensor):
@@ -116,7 +116,9 @@ class Tensor:
         return self.data
     
     def __str__(self):
-        return f"\n\n{self.name}\n-----\ndata:\n{str(self.data)}\n-----\ngrad:\n{str(self.grad)}\n"
+        data_str = np.array2string(self.data, precision=3, suppress_small=True)
+        grad_str = np.array2string(self.grad, precision=3, suppress_small=True) if self.grad is not None else "None"
+        return f"\n\n{self.name}\n-----\ndata:\n{data_str}\n-----\ngrad:\n{grad_str}\n"
     
     def __repr__(self):
         if self._name == None:

@@ -4,9 +4,9 @@ from abc import ABC, abstractmethod
 
 # region Optimizers
 class Optimizer(ABC): # Define common optimizer interface
-    @ abstractmethod
     def __init__(self,model_params,lr):
-        pass
+        self.model_params = model_params
+        self.lr = lr
 
     @ abstractmethod
     def step(self) -> None:
@@ -15,9 +15,11 @@ class Optimizer(ABC): # Define common optimizer interface
 
 class SGD(Optimizer):
     # Vanilla/base optimizer
-    pass
+    def step(self) -> None:
+        pass
 
 class Adam(Optimizer):
     # Adaptive Momemtum Estimation
-    pass
+    def step(self) -> None:
+        pass
 # end region

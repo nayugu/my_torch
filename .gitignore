@@ -209,3 +209,4 @@ __marimo__/
 # Test files
 test_*.py
 test*.py
+test*
