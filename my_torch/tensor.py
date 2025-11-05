@@ -552,6 +552,7 @@ class Tensor:
     
     # region Loss Functions
     def mean_squared_error_loss(predictions,targets):
+        """Applies MSE on predictions, with targets as a parameter"""
         n = predictions.data.size
         return predictions.calc_output_and_grad(
             other=targets,
@@ -562,6 +563,7 @@ class Tensor:
         )
 
     def cross_entropy_loss(predictions,targets,residual = 1e-7):
+        """Applies CE on predictions, with targets as a parameter"""
         n = predictions.data.size
         return predictions.calc_output_and_grad(
             other=targets,
@@ -572,6 +574,7 @@ class Tensor:
         )
 
     def binary_cross_entropy_loss(predictions,targets,residual = 1e-7):
+        """Applies BCE on predictions, with targets as a parameter"""
         n = predictions.data.size
         return predictions.calc_output_and_grad(
             other=targets,

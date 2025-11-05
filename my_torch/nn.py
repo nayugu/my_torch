@@ -117,55 +117,31 @@ class Reshape(Module):
 
 # region Cost Functions
 class CostFunction(ABC):
-    def __init__(self):
-        pass
-
     @ abstractmethod
-    def __call__(self,outputs,targets):
+    def __call__(self,
+                 outputs: Tensor,
+                 targets: Tensor):
         """
         outputs: shape = (batch_size, ...)
         targets: shape = (batch_size, ...)
         """
         pass
-
-    def _compute_normalized_cost(self,outputs,targets,loss_calculation: Callable):
-        """ 
-        Apply loss function and compute average cost, taking into account the number of training examples
-
-        Inputs
-        outputs: shape = (batch_size, ...)
-        targets: shape = (batch_size, ...)
-        loss_calculation: a method that takes in y_hat and y to calculate 
-                            loss for individual examples
-        """
-        if outputs.shape != targets.shape:
-            raise ValueError(f"shape mismatch: outputs.shape {outputs.shape} not equal targets.shape {targets.shape}")
-
-        batch_size = outputs.shape[0]
-        loss = loss_calculation(outputs,targets)
-        return np.sum(loss) / batch_size
 
 class CrossEntropyLoss(CostFunction):
-    def __call__(self,outputs,targets):
-        self._compute_normalized_loss(
-            outputs,
-            targets,
-            lambda y_hat, y: -np.log(y_hat)*y
-            )
+    def __call__(self,
+                 outputs:Tensor,
+                 targets:Tensor):
+        return outputs.cross_entropy_loss(targets)
     
 class BinaryCrossEntropyLoss(CostFunction):
-    def __call__(self,outputs,targets):
-        self._compute_normalized_loss(
-            outputs,
-            targets,
-            lambda y_hat, y: -np.log(y_hat)*y -np.log(1-y_hat)*(1-y)
-        )
+    def __call__(self,
+                 outputs:Tensor,
+                 targets:Tensor):
+        return outputs.binary_cross_entropy_loss(targets)
 
 class MeanSquaredError(CostFunction):
-    def __call__(self,outputs,targets):
-        self._compute_normalized_loss(
-            outputs,
-            targets,
-            lambda y_hat, y: (y_hat-y)**2 / 2
-        )
+    def __call__(self,
+                 outputs:Tensor,
+                 targets:Tensor):
+        return outputs.mean_squared_error_loss(targets)
 # endregion
