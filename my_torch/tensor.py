@@ -147,6 +147,12 @@ class Tensor:
             name = self._name
         return f"Tensor '{name}' of shape {self.shape}"
     
+    def item(self):
+        if self.data.size == 1:
+            return self.data.item()
+        else:
+            raise ValueError("only one element tensors can be converted to Python scalars")
+    
 
     @ property
     def shape(self):

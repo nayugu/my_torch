@@ -39,4 +39,4 @@ for i in range(iters):
     optimizer.step()
 
     if i % 100 == 0:
-        print(f"Iter {i}: Loss = {loss.data:.4f}")
+        print(f"Iter {i}: Loss = {loss.item():.4f}")
