@@ -37,6 +37,7 @@ class Tensor:
         # and then store the dimension to broadcast across
         self._left_matmul:Optional[int] = None 
         self._right_matmul:Optional[int] = None
+        self._reshape:Optional[int] = None
 
     # TODO: Use slicing and views to enable converging outputs to slice the gradient in back prop
     
@@ -69,6 +70,13 @@ class Tensor:
                         accumulated_grad = np.ones(shape=tuple(ones_shape))
                     new_accumulated_grad = d_sub_node @ accumulated_grad
 
+                # Current node was created by reshaping
+                elif isinstance(sub_node._reshape,tuple):
+                    print(sub_node)
+                    print(node)
+                    new_accumulated_grad = np.reshape(accumulated_grad,shape=sub_node._reshape)
+                
+                # Normal arithmatic operation
                 else:
                     new_accumulated_grad = accumulated_grad * d_sub_node
 
@@ -485,8 +493,10 @@ class Tensor:
         )
     # endregion
     
-    # region Training Modules
-    def dropout(self,p=0.5):
+    # region Miscellaneous Modules
+    def dropout(self,
+                p=0.5 # probability of dropping a unit
+                ):
         if not Tensor.training or p == 0:
             return self
         else:
@@ -499,6 +509,29 @@ class Tensor:
                 dself = lambda s: mask,
                 dother = None,
                 op_name = f'{self.name}.dropout'
+        )
+
+    # TODO: Fix flatten for addition?
+    def flatten(self):
+        # output = Flatten(self)
+        self._reshape = self.shape # Notify output tensor that it was created by reshaping
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: np.reshape(s,shape=(-1)),
+            dself = lambda s: 1,
+            dother = None,
+            op_name = f'{self.name}.flatten'
+        )
+    
+    def reshape(self,shape:tuple):
+        # output = Reshape(self,shape)
+        self._reshape = self.shape # Notify output tensor that it was created by reshaping
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: np.reshape(s,shape=shape),
+            dself = lambda s: 1,
+            dother = None,
+            op_name = f'{self.name}.reshape{shape}'
         )
     # endregion
     
