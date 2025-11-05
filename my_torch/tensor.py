@@ -47,10 +47,14 @@ class Tensor:
     
     # region Calculus
     def recursive_chain_rule(node: Tensor,
-                            leaves: dict[Tensor,np.ndarray] = {}, accumulated_grad=1.0):
+                            leaves: dict[Tensor,np.ndarray] = {}, accumulated_grad=1.0, depth=0, print_process=True):
         if leaves is None:
             leaves: dict[Tensor,np.ndarray] = {}
-            
+        
+        if print_process:
+            print("" if depth==0 \
+                  else "   " + " | "*(depth-1), node.name)
+
         if node.partial_d == {}:
             return node
         else:
@@ -85,15 +89,18 @@ class Tensor:
                     new_accumulated_grad = accumulated_grad * d_sub_node
 
                 leaf = sub_node.recursive_chain_rule(leaves=leaves,
-                                                     accumulated_grad=new_accumulated_grad)
+                                                     accumulated_grad=new_accumulated_grad,
+                                                     depth = depth+1,
+                                                     print_process=print_process)
                 if leaf in leaves:
                     leaves[leaf] += new_accumulated_grad
                 else:
                     leaves[leaf] = new_accumulated_grad
         
-    def backward(self):
+    def backward(self,print_process=False):
         leaves: dict[Tensor,np.ndarray] = {}
-        self.recursive_chain_rule(leaves=leaves)
+        self.recursive_chain_rule(leaves=leaves,
+                                  print_process=print_process)
         if None in leaves: del leaves[None]
 
         result = {leaf: grad.copy() if isinstance(grad, np.ndarray)
