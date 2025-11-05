@@ -62,7 +62,8 @@ class Linear(Module):
         self._w = Parameter(np.random.randn(flattened_in_dim,out_dim)/np.sqrt(flattened_in_dim))
         self._b = Parameter(np.zeros((1,out_dim)))
     
-    def forward(self,a_prev):
+    def __call__(self,
+                 a_prev:Tensor):
         """
         Input
         # batch first because it is logical. E.g. x[0] gives the first batch
@@ -76,7 +77,7 @@ class Linear(Module):
         # Flatten a_prev it is of higher dims
         if len(a_prev.shape) >= 3:
             batch_size = a_prev.shape[0]
-            a_prev = a_prev.reshape(batch_size, -1)
+            a_prev = a_prev.reshape((batch_size, -1))
         return a_prev @ self._w + self._b
 
 class ReLU(Module):
@@ -92,15 +93,24 @@ class Sigmoid(Module):
 class Tanh(Module):
     def __call__(self,
                  a_prev:Tensor):
-        return a_prev.tan
+        return a_prev.tanh()
 
 class Dropout(Module):
-    pass
+    def __call__(self,
+                 a_prev: Tensor,
+                 p=0.5):
+        return a_prev.dropout(p=p)
 
 class Flatten(Module):
     def __call__(self,
                  a_prev:Tensor):
-        return a_prev.tan
+        return a_prev.flatten()
+    
+class Reshape(Module):
+    def __call__(self,
+                 a_prev:Tensor,
+                 shape:tuple):
+        return a_prev.reshape(shape=shape)
 
 # endregion
 
