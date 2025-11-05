@@ -51,9 +51,14 @@ class Module(ABC):
         """Abstract method for forward propagation."""
         raise NotImplementedError("Must override abstract method in subclasses.")
     
-    def parameters(self):
+    def parameters(self, recurse=True):
         # Use generator to return parameters
-        return (p for p in self._parameters)
+        for param in self._parameters.values():
+            yield param
+
+        if recurse:
+            for module in self._modules.values():
+                yield from module.parameters()
 # endregion
 
 # region Layer modules
@@ -86,17 +91,11 @@ class Linear(Module):
         return a_prev @ self._w + self._b
 
 class ReLU(Module):
-    def __init__(self):
-        super().__init__()
-
     def __call__(self,
                  a_prev:Tensor):
         return a_prev.relu()
 
 class Sigmoid(Module):
-    def __init__(self):
-        super().__init__()
-
     def __call__(self,
                  a_prev:Tensor):
         return a_prev.sigmoid()
