@@ -35,9 +35,11 @@ class Tensor:
 
         # Used to check when to apply matrix multiplication for chain rule
         # and then store the dimension to broadcast across
-        self._left_matmul:Optional[int] = None 
-        self._right_matmul:Optional[int] = None
-        self._reshape:Optional[int] = None
+
+        # Clarify exactly which output is what
+        self._left_matmul: dict[Tensor,int] = {} 
+        self._right_matmul: dict[Tensor,int] = {}
+        self._reshape: dict[Tensor,int] = {}
 
     # TODO: Use slicing and views to enable converging outputs to slice the gradient in back prop
     
@@ -52,29 +54,27 @@ class Tensor:
         else:
             for sub_node, d_sub_node in node.partial_d.items():
                 # Current node was created through matrix multiplication
-                if sub_node._left_matmul:
+                if node in sub_node._left_matmul:
                     if isinstance(accumulated_grad,float) or \
                         isinstance(accumulated_grad,np.float64): # =1.0
                         
                         ones_shape = list(sub_node.shape) # [..., rows, cols]
-                        ones_shape[-1] = sub_node._left_matmul  # Last dim matches the contracted dimension, i.e. cols
+                        ones_shape[-1] = sub_node._left_matmul[node]  # Last dim matches the contracted dimension, i.e. cols
                         accumulated_grad = np.ones(shape=tuple(ones_shape))
                     new_accumulated_grad =accumulated_grad @ d_sub_node
 
-                elif sub_node._right_matmul:
+                elif node in sub_node._right_matmul:
                     if isinstance(accumulated_grad,float) or \
                         isinstance(accumulated_grad,np.float64): # =1.0
                         
                         ones_shape = list(sub_node.shape) # [..., rows, cols]
-                        ones_shape[-2] = sub_node._right_matmul  # Second-to-last dim matches contracted dimension, i.e. rows
+                        ones_shape[-2] = sub_node._right_matmul[node]  # Second-to-last dim matches contracted dimension, i.e. rows
                         accumulated_grad = np.ones(shape=tuple(ones_shape))
                     new_accumulated_grad = d_sub_node @ accumulated_grad
 
                 # Current node was created by reshaping
-                elif isinstance(sub_node._reshape,tuple):
-                    print(sub_node)
-                    print(node)
-                    new_accumulated_grad = np.reshape(accumulated_grad,shape=sub_node._reshape)
+                elif node in sub_node._reshape:
+                    new_accumulated_grad = np.reshape(accumulated_grad,shape=sub_node._reshape[node])
                 
                 # Normal arithmatic operation
                 else:
@@ -270,15 +270,17 @@ class Tensor:
     # TODO: Learn Matrix Calculus
     def __matmul__(self, other):
         # output = self @ other
-        self._left_matmul = other.shape[1]
-        other._right_matmul = self.shape[0]
-        return self.calc_output_and_grad(
+        output = self.calc_output_and_grad(
             other,
             operation = lambda s,o: s @ o,
             dself =     lambda s,o: o.T,
             dother =    lambda s,o: s.T,
             op_name = f'({self.name} @ {other.name})'
         )
+        self._left_matmul[output] = other.shape[1]
+        other._right_matmul[output] = self.shape[0]
+
+        return output
     # endregion
     
     # region Reversed order arithmatic operations. E.g. a + b vs. b + a
@@ -336,16 +338,17 @@ class Tensor:
     
     def __rmatmul__(self, other):
         # output = other @ self
-        other._left_matmul = self.shape[1]
-        self._right_matmul = other.shape[0]
-
-        return self.calc_output_and_grad(
+        output = self.calc_output_and_grad(
             other,
             operation = lambda s,o: o @ s,
             dself =     lambda s,o: o.T,
             dother =    lambda s,o: s.T,
             op_name = f'({other.name} @ {self.name})'
         )
+        other._left_matmul[output] = self.shape[1]
+        self._right_matmul[output] = other.shape[0]
+
+        return output
     
     # endregion
     
@@ -514,25 +517,27 @@ class Tensor:
     # TODO: Fix flatten for addition?
     def flatten(self):
         # output = Flatten(self)
-        self._reshape = self.shape # Notify output tensor that it was created by reshaping
-        return self.calc_output_and_grad(
+        output = self.calc_output_and_grad(
             other=None,
             operation=lambda s: np.reshape(s,shape=(-1)),
             dself = lambda s: 1,
             dother = None,
             op_name = f'{self.name}.flatten'
         )
+        self._reshape[output] = self.shape # Notify output tensor that it was created by reshaping
+        return output
     
     def reshape(self,shape:tuple):
         # output = Reshape(self,shape)
-        self._reshape = self.shape # Notify output tensor that it was created by reshaping
-        return self.calc_output_and_grad(
+        output = self.calc_output_and_grad(
             other=None,
             operation=lambda s: np.reshape(s,shape=shape),
             dself = lambda s: 1,
             dother = None,
             op_name = f'{self.name}.reshape{shape}'
         )
+        self._reshape[output] = self.shape # Notify output tensor that it was created by reshaping
+        return output
     # endregion
     
     # region Loss Functions
