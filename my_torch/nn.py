@@ -39,7 +39,6 @@ class Module(ABC):
         """
 
         if isinstance(value,Parameter):
-            self._modules[name] = value
             self._parameters[name] = value
 
         elif isinstance(value,Module):
@@ -61,6 +60,7 @@ class Module(ABC):
 class Linear(Module):
     """Linear/FC module. Creates randomized weights and biases."""
     def __init__(self,in_dim:tuple,out_dim:int):
+        super().__init__()
         flattened_in_dim = np.prod(in_dim) if isinstance(in_dim,tuple) else in_dim
 
         # Note to self: input_dim -> #rows, output_dim -> #columns
@@ -86,11 +86,17 @@ class Linear(Module):
         return a_prev @ self._w + self._b
 
 class ReLU(Module):
+    def __init__(self):
+        super().__init__()
+
     def __call__(self,
                  a_prev:Tensor):
         return a_prev.relu()
 
 class Sigmoid(Module):
+    def __init__(self):
+        super().__init__()
+
     def __call__(self,
                  a_prev:Tensor):
         return a_prev.sigmoid()
