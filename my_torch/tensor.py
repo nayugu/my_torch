@@ -11,6 +11,7 @@ class Tensor:
     # Class attributes
     auto_name = False # By default, do not auto name Tensors
     equation_precision = 2
+    training = False
 
     # Core methods
     def __init__(self, 
@@ -433,6 +434,17 @@ class Tensor:
             dother = None,
             op_name = f'{self.name}.sigmoid'
         )
+    
+    def tanh(self):
+        # output = Tanh(self)
+        tanh = (np.exp(self.data) - np.exp(-self.data)) / (np.exp(self.data) + np.exp(-self.data))
+        return self.calc_output_and_grad(
+            other=None,
+            operation=lambda s: tanh,
+            dself = lambda s: 1-(tanh**2),
+            dother = None,
+            op_name = f'{self.name}.tanh'
+        )
 
     def softmax(self):
         # output = Softmax(self)
@@ -470,6 +482,23 @@ class Tensor:
             dself = lambda s: jacobian(s),
             dother = None,
             op_name = f'{self.name}.softmax'
+        )
+    # endregion
+    
+    # region Training Modules
+    def dropout(self,p=0.5):
+        if not Tensor.training or p == 0:
+            return self
+        else:
+            # output = Dropout(self)
+            mask = (np.random.random(size=self.shape)>=p).astype(np.float64)
+            mask /= 1 - p # scale by keep prob
+            return self.calc_output_and_grad(
+                other=None,
+                operation=lambda s: s * mask,
+                dself = lambda s: mask,
+                dother = None,
+                op_name = f'{self.name}.dropout'
         )
     # endregion
     
