@@ -51,6 +51,9 @@ class Module(ABC):
         """Abstract method for forward propagation."""
         raise NotImplementedError("Must override abstract method in subclasses.")
     
+    def __call__(self, x):
+        return self.forward(x)
+    
     def parameters(self, recurse=True):
         # Use generator to return parameters
         for param in self._parameters.values():
@@ -155,13 +158,13 @@ class CrossEntropyLoss(CostFunction):
                  targets:Tensor):
         return outputs.cross_entropy_loss(targets)
     
-class BinaryCrossEntropyLoss(CostFunction):
+class BCELoss(CostFunction):
     def __call__(self,
                  outputs:Tensor,
                  targets:Tensor):
         return outputs.binary_cross_entropy_loss(targets)
 
-class MeanSquaredError(CostFunction):
+class MSELoss(CostFunction):
     def __call__(self,
                  outputs:Tensor,
                  targets:Tensor):
