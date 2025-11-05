@@ -59,6 +59,18 @@ class Module(ABC):
         if recurse:
             for module in self._modules.values():
                 yield from module.parameters()
+
+    def state_dict(self, output = {}, module_name = "", recurse=True):
+        # Use generator to return parameters
+        for name,param in self._parameters.items():
+            output[f"{module_name}{name}"] = param
+
+        if recurse:
+            for name,module in self._modules.items():
+                module.state_dict(output, f"{module_name}{name}.", recurse=True)
+
+        return output
+        
 # endregion
 
 # region Layer modules
