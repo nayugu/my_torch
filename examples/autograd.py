@@ -1,12 +1,14 @@
 import sys
 sys.path.append("../my_torch")
-from my_torch.nn import *
-Tensor.auto_name = True
+import numpy as np
+import my_torch as torch
+from my_torch import print_partial_d
+torch.Tensor.auto_name = True
 
-a = Tensor([-2*np.pi], name='a', requires_grad=True)
-b = Tensor([3], name='b', requires_grad=True)
-c = Tensor([4], name='c', requires_grad=True)
-d = Tensor([5], name='d', requires_grad=True)
+a = torch.Tensor([-2*np.pi], name='a', requires_grad=True)
+b = torch.Tensor([3], name='b', requires_grad=True)
+c = torch.Tensor([4], name='c', requires_grad=True)
+d = torch.Tensor([5], name='d', requires_grad=True)
 
 # Feel free to change these equations to test autograd!
 x = a * b * c * d
