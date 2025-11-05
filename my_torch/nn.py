@@ -31,6 +31,7 @@ class Module(ABC):
         self._modules = OrderedDict()
         self._parameters = OrderedDict()
 
+    # TODO: Create recursive parameter and module method
     def __setattr__(self, name:str, value):
         """
         Implement direct assignment of modules as a model attributes, 
@@ -47,9 +48,13 @@ class Module(ABC):
         object.__setattr__(self,name,value)
         
 
-    def forward(self):
+    def forward(self, x):
         """Abstract method for forward propagation."""
         raise NotImplementedError("Must override abstract method in subclasses.")
+    
+    def parameters(self):
+        # Use generator to return parameters
+        return (p for p in self._parameters)
 # endregion
 
 # region Layer modules
