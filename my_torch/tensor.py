@@ -226,7 +226,6 @@ class Tensor:
         return output
     # endregion
     
-    # TODO: Create module objects when arithmatic operations are called for back propagation
     # region Arithmatic operations
     def __add__(self, other):
         # output = self + other
@@ -278,7 +277,6 @@ class Tensor:
             op_name = f'({self.name} ** {other.name})'
         )
     
-    # TODO: Learn Matrix Calculus
     def __matmul__(self, other):
         # output = self @ other
         output = self.calc_output_and_grad(
@@ -524,7 +522,6 @@ class Tensor:
                 op_name = f'{self.name}.dropout'
         )
 
-    # TODO: Fix flatten for addition?
     def flatten(self):
         # output = Flatten(self)
         output = self.calc_output_and_grad(

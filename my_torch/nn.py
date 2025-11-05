@@ -16,7 +16,7 @@ np.set_printoptions(precision=3)
 
 class Parameter(Tensor):
     def __init__(self, 
-                 ndarray: Tensor, 
+                 ndarray: Tensor | np.ndarray, 
                  name: str | None = None):
         super().__init__(ndarray,
                          name,
