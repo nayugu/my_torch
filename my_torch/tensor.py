@@ -53,10 +53,14 @@ class Tensor:
         
         if print_process:
             print("" if depth==0 \
-                  else "   " + " | "*(depth-1), node.name)
+                  else f"{depth:<3}" + " | "*(depth-1), node.name, node.shape)
 
+        # If the current node is a leaf, update it
         if node.partial_d == {}:
-            return node
+            if node in leaves:
+                leaves[node] += accumulated_grad
+            else:
+                leaves[node] = accumulated_grad
         else:
             for sub_node, d_sub_node in node.partial_d.items():
                 # Current node was created through matrix multiplication
@@ -88,14 +92,10 @@ class Tensor:
                 else:
                     new_accumulated_grad = accumulated_grad * d_sub_node
 
-                leaf = sub_node.recursive_chain_rule(leaves=leaves,
-                                                     accumulated_grad=new_accumulated_grad,
-                                                     depth = depth+1,
-                                                     print_process=print_process)
-                if leaf in leaves:
-                    leaves[leaf] += new_accumulated_grad
-                else:
-                    leaves[leaf] = new_accumulated_grad
+                sub_node.recursive_chain_rule(leaves=leaves,
+                                                accumulated_grad=new_accumulated_grad,
+                                                depth = depth+1,
+                                                print_process=print_process)
         
     def backward(self,print_process=False):
         leaves: dict[Tensor,np.ndarray] = {}
@@ -286,8 +286,8 @@ class Tensor:
             dother =    lambda s,o: s.T,
             op_name = f'({self.name} @ {other.name})'
         )
-        output._left_matmul = {self:other.shape[1]}
-        output._right_matmul = {other:self.shape[0]}
+        output._left_matmul = {self: output.shape[-1]}
+        output._right_matmul = output._right_matmul = {other: output.shape[-2] if len(output.shape) > 1 else output.shape[0]}
         return output
     # endregion
     
@@ -301,7 +301,7 @@ class Tensor:
             operation = lambda s,o: o + s,
             dself =     lambda s,o: 1.,
             dother =    lambda s,o: 1.,
-            op_name = f'({other.name} + {self.name}'
+            op_name = f'({other} + {self.name}'
         )
     
     def __rsub__(self, other):
@@ -311,7 +311,7 @@ class Tensor:
             operation = lambda s,o: o - s,
             dself =     lambda s,o: -1.,
             dother =    lambda s,o: 1.,
-            op_name = f'({other.name} - {self.name})'
+            op_name = f'({other} - {self.name})'
         )
         
     def __rmul__(self, other):
@@ -321,7 +321,7 @@ class Tensor:
             operation = lambda s,o: o * s,
             dself =     lambda s,o: o,
             dother =    lambda s,o: s,
-            op_name = f'({other.name} * {self.name})'
+            op_name = f'({other} * {self.name})'
         )
 
     def __rtruediv__(self, other):
@@ -331,7 +331,7 @@ class Tensor:
             operation = lambda s,o: o / s,
             dself =     lambda s,o: o * -(s ** -2),
             dother =    lambda s,o: 1/s,
-            op_name = f'({other.name} / {self.name})'
+            op_name = f'({other} / {self.name})'
         )
     
     def __rpow__(self, other):
@@ -341,7 +341,7 @@ class Tensor:
             operation = lambda s,o: o ** s,
             dself =     lambda s,o: np.log(o) * o ** s,
             dother =    lambda s,o: s * (o ** (s-1)),
-            op_name = f'({other.name} ** {self.name})'
+            op_name = f'({other} ** {self.name})'
         )
     
     def __rmatmul__(self, other):
@@ -351,11 +351,11 @@ class Tensor:
             operation = lambda s,o: o @ s,
             dself =     lambda s,o: o.T,
             dother =    lambda s,o: s.T,
-            op_name = f'({other.name} @ {self.name})'
+            op_name = f'({other} @ {self.name})'
         )
 
-        output._left_matmul = {other:self.shape[1]}
-        output._right_matmul = {self:other.shape[0]}
+        output._left_matmul = {other: output.shape[-1]}
+        output._right_matmul = {self: output.shape[-2] if len(output.shape) > 1 else output.shape[0]}
         return output
     
     # endregion
