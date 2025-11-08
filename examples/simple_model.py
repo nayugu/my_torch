@@ -28,7 +28,7 @@ y = torch.Tensor([[1,2,3,4,5]]) ; y.name = 'y'
 
 model = MyModel()
 criterion = nn.MSELoss()
-optimizer = optim.SGD(model.parameters(),lr=0.01)
+optimizer = optim.Adam(model.parameters(),lr=0.01)
 
 iters = 1000
 for i in range(iters):

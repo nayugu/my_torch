@@ -11,6 +11,7 @@ from .tensor import Tensor, print_partial_d
 # endregion
 
 # region Settings
+np.random.seed(None)
 np.set_printoptions(precision=3)
 # endregion
 

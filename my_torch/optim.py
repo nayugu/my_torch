@@ -25,7 +25,7 @@ class Optimizer(ABC): # Define common optimizer interface
 
 
 class SGD(Optimizer):
-    # Vanilla/base optimizer
+    # Standard Gradient Descent
     def step(self) -> None:
         for param in self.model_params:
             if param.grad is None:
@@ -34,6 +34,27 @@ class SGD(Optimizer):
 
 class Adam(Optimizer):
     # Adaptive Momemtum Estimation
+    def __init__(self, model_params, lr, b1=0.9, b2=0.999):
+        super().__init__(model_params, lr)
+        self.b1 = b1 # for Momentum
+        self.b2 = b2 # for Squared gradients
+
+        self.v = {param:0 for param in self.model_params}
+        self.s = {param:0 for param in self.model_params}
+
     def step(self) -> None:
-        pass
+        for param in self.model_params:
+            if param.grad is None:
+                continue
+            self.v[param] = self.b1 * self.v[param] + (1-self.b1) * param.grad
+            self.s[param] = self.b2 * self.s[param] + (1-self.b2) * (param.grad ** 2)
+
+            # Correct bias
+            _v = self.v[param] / (1-self.b1)
+            _s = self.s[param] / (1-self.b2)
+            weighted_grad = _v/((_s**0.5)+1e-16)
+            
+            param.data -= self.lr * weighted_grad
+
+        
 # end region
