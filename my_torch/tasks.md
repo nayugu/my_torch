@@ -1,0 +1,22 @@
+# Create
+
+- Method to save parameters
+- Adam Optimization
+- Normalization
+- Mini batch / stochastic gradient descent
+- ResNets / Residuals
+    - Many-to-one. Must implement slicing.
+- VISION
+    - Conv2D
+    - Conv3D
+    - UNET
+    - YOLO
+- SEQUENCE
+    - Gates
+    - GRU
+    - LSTM
+    - BRNNs
+    - Deep RNNs
+    - Transformers
+        - Multihead attention block
+    - Beam Search
