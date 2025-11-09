@@ -43,7 +43,6 @@ for i in range(iters):
     y_hat = model(x)
     loss = criterion(y_hat,y)
     leaves = loss.backward()
-    #torch.print_partial_d(leaves)
     optimizer.step()
 
     if i % 1000 == 0:
