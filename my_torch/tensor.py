@@ -53,7 +53,7 @@ class Tensor:
         
         if print_process:
             print("depth  shape.......  tensor\n-----  ------------  ------" if depth==0 \
-                  else f"{depth:<5}  {str(node.shape):<12} {" | "*(depth-1)}{node.name}")
+                  else f"{depth:<5}  {str(node.shape):<12}  {"|  "*(depth-1)}{node.name}")
 
         # If the current node is a leaf, update it
         if node.partial_d == {}:
