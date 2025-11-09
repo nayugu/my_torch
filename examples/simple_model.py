@@ -8,12 +8,12 @@ torch.Tensor.auto_name = True
 class MyModel(nn.Module):
     def __init__(self):
         super().__init__()
-
         self.fc1 = nn.Linear(2,3)
         self.fc2 = nn.Linear(3,4)
         self.fc3 = nn.Linear(4,5)
 
         self.relu = nn.ReLU()
+        self.name_modules()
 
     def forward(self,x):
         x = self.fc1(x) ; x.name = "z1"
@@ -22,7 +22,7 @@ class MyModel(nn.Module):
         x = self.relu(x) ; x.name = "a2"
         x = self.fc3(x) ; x.name = "z3"
         return x
-    
+
 x = torch.Tensor([[1, 2],
                   [3, 4],
                   [5, 6]]); x.name = 'x'
@@ -37,13 +37,14 @@ model = MyModel()
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(),lr=0.01)
 
-iters = 10000
+iters = 1
 for i in range(iters):
     optimizer.zero_grad()
     y_hat = model(x)
     loss = criterion(y_hat,y)
-    leaves = loss.backward(print_process=True)
+    leaves = loss.backward()
     optimizer.step()
 
-    if i % 1000 == 0:
-        print(f"Iter {i}: Loss = {loss.item():.4f}")
+    # if i % 1000 == 0:
+    #     print(f"Iter {i}: Loss = {loss.item():.4f}")
+torch.print_partial_d(leaves)

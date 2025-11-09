@@ -610,20 +610,20 @@ class Tensor:
 
 # region Global Helper Methods
 def print_partial_d(partial_d_dict):
-        """
-        Prints the partial derivatives stored within a dictionary
-        """
-        output = "\nPartial Derivatives\n"
-        for tensor,partial_d in partial_d_dict.items():
-            if tensor: # Not none
-                if isinstance(partial_d,np.ndarray) and len(partial_d) > 1:
-                    next_line = "\n"
-                else:
-                    next_line = ""
-                output += (f"{tensor.name}{tensor.data} : {next_line}{partial_d}\n\n")
+    """
+    Prints the partial derivatives stored within a dictionary
+    """
+    output = "\nPartial Derivatives\n"
+    for tensor,partial_d in partial_d_dict.items():
+        if tensor: # Not none
+            if isinstance(partial_d,np.ndarray) and len(partial_d) > 1:
+                next_line = "\n"
+            else:
+                next_line = ""
+            output += (f"{tensor.name}\n{tensor.data} : {next_line}{partial_d}\n\n")
 
-        print(output)
-        return output
+    print(output)
+    return output
 
 def concise(str:str,
             replace_symbol:str="..."):

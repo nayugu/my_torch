@@ -25,12 +25,13 @@ class Parameter(Tensor):
 
 # region Module
 class Module(ABC):
-    def __init__(self):
+    def __init__(self, name=None):
         """
         Create efficient interal model storage for modules.
         """
         self._modules = OrderedDict()
         self._parameters = OrderedDict()
+        self.name: Optional[str] = name
 
     # TODO: Create recursive parameter and module method
     def __setattr__(self, name:str, value):
@@ -74,6 +75,26 @@ class Module(ABC):
                 module.state_dict(output, f"{module_name}{name}.", recurse=True)
 
         return output
+    
+    def name_modules(self, upstream_name=None):
+        """Recursive method to name modules"""
+
+        # Model module and name was not set
+        if not self.name and not upstream_name:
+            upstream_name = ""
+
+        # Module within model, must have a name
+        else:                
+            upstream_name = self.name+"."
+
+        for name,param in self._parameters.items():
+            param.name = f"{upstream_name}{name}"
+
+        for name,module in self._modules.items():
+            module.name = f"{upstream_name}{name}"
+            
+            module.name_modules(upstream_name=f"{upstream_name}{name}")
+
         
 # endregion
 
