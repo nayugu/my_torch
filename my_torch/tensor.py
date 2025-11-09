@@ -84,13 +84,19 @@ class Tensor:
                         accumulated_grad = np.ones(shape=tuple(ones_shape))
                     new_accumulated_grad = d_sub_node @ accumulated_grad
 
+
                 # Current node was created by reshaping
                 elif node._reshape:
                     new_accumulated_grad = np.reshape(accumulated_grad,shape=node._reshape)
                 
+
                 # Normal arithmatic operation
                 else:
                     new_accumulated_grad = accumulated_grad * d_sub_node
+
+                    # Check for broadcasting
+                    if new_accumulated_grad.shape != sub_node.shape:
+                        new_accumulated_grad = un_broadcast(new_accumulated_grad,sub_node.shape)
 
                 sub_node.recursive_chain_rule(leaves=leaves,
                                                 accumulated_grad=new_accumulated_grad,
@@ -114,10 +120,6 @@ class Tensor:
     def receive_grad(self,grad):
         """Method called to receive gradient"""
         if self.requires_grad:
-            # Account for b, where we must sum along the batch axis
-            if isinstance(grad,np.ndarray) and self.data.shape != grad.shape:
-                grad = np.sum(grad,axis=0)
-                
             if self.grad is None:
                 self.grad = grad
             else:
@@ -638,5 +640,20 @@ def concise(str:str,
 
         #print(stack,10*" ",str[:i+1],10*" ",content)
     return content
+
+def un_broadcast(broadcasted_arr:np.ndarray,
+                 original_shape:tuple): 
+    broadcasted_shape = broadcasted_arr.shape
+
+    if len(broadcasted_shape) != len(original_shape): 
+        raise ValueError(f"Cannot resolve un-broadcasting of {broadcasted_shape} into {original_shape}")
+    
+    broadcasted_dims = []
+    for dim in range(len(broadcasted_shape)):
+        if broadcasted_shape[dim] > 1 and original_shape[dim] == 1:
+            broadcasted_dims.append(dim) 
+
+    un_broadcasted_arr = np.sum(broadcasted_arr,axis=tuple(broadcasted_dims))
+    return un_broadcasted_arr
 
 # endregion
