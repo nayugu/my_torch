@@ -80,13 +80,14 @@ class Module(ABC):
 # region Layer modules
 class Linear(Module):
     """Linear/FC module. Creates randomized weights and biases."""
-    def __init__(self,in_dim:tuple,out_dim:int):
+    def __init__(self,in_dim:int|tuple, # ignoring batch size
+                      out_dim:int): # ignoring batch size
         super().__init__()
         flattened_in_dim = np.prod(in_dim) if isinstance(in_dim,tuple) else in_dim
 
         # Note to self: input_dim -> #rows, output_dim -> #columns
-        self._w = Parameter(np.random.randn(flattened_in_dim,out_dim)/np.sqrt(flattened_in_dim))
-        self._b = Parameter(np.zeros((1,out_dim)))
+        self._w = Parameter(np.random.randn(flattened_in_dim,out_dim)/np.sqrt(flattened_in_dim), name='w')
+        self._b = Parameter(np.zeros((1,out_dim)),name='b')
     
     def __call__(self,
                  a_prev:Tensor):

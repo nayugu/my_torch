@@ -23,20 +23,29 @@ class MyModel(nn.Module):
         x = self.fc3(x) ; x.name = "z3"
         return x
     
-x = torch.Tensor([[1,2]]) ; x.name = 'x'
-y = torch.Tensor([[1,2,3,4,5]]) ; y.name = 'y'
+x = torch.Tensor([[1, 2],
+                  [3, 4],
+                  [5, 6]]); x.name = 'x'
+
+# y = [x1, x2, x1+x2, x1*x2, x1^2]
+y = torch.Tensor([[1, 2, 3, 2, 1],      # [1, 2, 1+2, 1*2, 1^2]
+                  [3, 4, 7, 12, 9],     # [3, 4, 3+4, 3*4, 3^2]
+                  [5, 6, 11, 30, 25]])  # [5, 6, 5+6, 5*6, 5^2]
+y.name = 'y'
 
 model = MyModel()
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(),lr=0.01)
 
-iters = 1000
+iters = 1
 for i in range(iters):
     optimizer.zero_grad()
     y_hat = model(x)
     loss = criterion(y_hat,y)
-    loss.backward()
+    leaves = loss.backward()
+    torch.print_partial_d(leaves)
     optimizer.step()
 
-    if i % 100 == 0:
+    if i % 1000 == 0:
         print(f"Iter {i}: Loss = {loss.item():.4f}")
+print(y_hat)

@@ -1,5 +1,6 @@
 # region Imports:
 from abc import ABC, abstractmethod
+import numpy as np
 # endregion
 
 # region Optimizers
@@ -40,8 +41,8 @@ class Adam(Optimizer):
         self.b2 = b2 # for Squared gradients
         self.t = 0 # time step
 
-        self.v = {param:0 for param in self.model_params}
-        self.s = {param:0 for param in self.model_params}
+        self.v = {param:np.zeros(shape=param.shape) for param in self.model_params}
+        self.s = {param:np.zeros(shape=param.shape) for param in self.model_params}
 
     def step(self) -> None:
         self.t += 1

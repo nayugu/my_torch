@@ -2,6 +2,7 @@
 
 - Method to save parameters
 - Adam Optimization
+- Resolve broadcasting in back prop
 - Normalization
 - Mini batch / stochastic gradient descent
 - ResNets / Residuals

@@ -114,6 +114,10 @@ class Tensor:
     def receive_grad(self,grad):
         """Method called to receive gradient"""
         if self.requires_grad:
+            # Account for b, where we must sum along the batch axis
+            if isinstance(grad,np.ndarray) and self.data.shape != grad.shape:
+                grad = np.sum(grad,axis=0)
+                
             if self.grad is None:
                 self.grad = grad
             else:
