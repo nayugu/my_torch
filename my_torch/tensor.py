@@ -53,7 +53,7 @@ class Tensor:
         
         if print_process:
             print("depth  shape.......  tensor\n-----  ------------  ------" if depth==0 \
-                  else f"{depth:<5}  {str(node.shape):<12}  {" | "*(depth-1)}{node.name}")
+                  else f"{depth:<5}  {str(node.shape):<12} {" | "*(depth-1)}{node.name}")
 
         # If the current node is a leaf, update it
         if node.partial_d == {}:
@@ -100,6 +100,7 @@ class Tensor:
                     if isinstance(new_accumulated_grad,float) or isinstance(new_accumulated_grad,np.float64):
                         pass
                     
+                    # This part may be unecessary
                     # # Input is a broadcasted tensor but input is a scalar
                     # elif isinstance(new_accumulated_grad,np.ndarray) and \
                     #     (isinstance(d_sub_node,float) or isinstance(d_sub_node,np.float64)): 

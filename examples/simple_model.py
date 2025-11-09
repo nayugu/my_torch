@@ -42,7 +42,7 @@ for i in range(iters):
     optimizer.zero_grad()
     y_hat = model(x)
     loss = criterion(y_hat,y)
-    leaves = loss.backward()
+    leaves = loss.backward(print_process=True)
     optimizer.step()
 
     if i % 1000 == 0:
