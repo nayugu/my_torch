@@ -37,15 +37,14 @@ model = MyModel()
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(),lr=0.01)
 
-iters = 1
+iters = 10000
 for i in range(iters):
     optimizer.zero_grad()
     y_hat = model(x)
     loss = criterion(y_hat,y)
     leaves = loss.backward()
-    torch.print_partial_d(leaves)
+    #torch.print_partial_d(leaves)
     optimizer.step()
 
     if i % 1000 == 0:
         print(f"Iter {i}: Loss = {loss.item():.4f}")
-print(y_hat)
