@@ -3,6 +3,8 @@
 - Method to save parameters
 - Adam Optimization
 - Resolve broadcasting in back prop
+
+- Track exactly which dims were broadcasted
 - Normalization
 - Mini batch / stochastic gradient descent
 - ResNets / Residuals

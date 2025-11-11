@@ -657,15 +657,22 @@ def un_broadcast(broadcasted_arr:np.ndarray,
                  original_shape:tuple): 
     broadcasted_shape = broadcasted_arr.shape
 
-    if len(broadcasted_shape) != len(original_shape): 
-        raise ValueError(f"Cannot resolve un-broadcasting of {broadcasted_shape} into {original_shape}")
+    if len(broadcasted_shape) > len(original_shape): 
+        # Prepend 1s to broadcast (following NumPy's conventions)
+        tmp = list(original_shape)
+        for _ in range(len(broadcasted_shape)-len(original_shape)):
+            tmp.insert(0,1)
+        original_shape = tuple(tmp)
+
+    elif len(broadcasted_shape) < len(original_shape): 
+        raise ValueError("Number of broadcasted dims cannot be less than original dims")
     
     broadcasted_dims = []
     for dim in range(len(broadcasted_shape)):
         if broadcasted_shape[dim] > 1 and original_shape[dim] == 1:
             broadcasted_dims.append(dim) 
 
-    un_broadcasted_arr = np.sum(broadcasted_arr,axis=tuple(broadcasted_dims))
+    un_broadcasted_arr = np.sum(broadcasted_arr,axis=tuple(broadcasted_dims),keepdims=True)
     return un_broadcasted_arr
 
 # endregion
