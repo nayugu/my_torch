@@ -4,10 +4,12 @@ MyTorch
 
 # region Imports
 from __future__ import annotations
+import sys
+sys.path.append("../my_torch")
 from abc import ABC, abstractmethod
 from typing import OrderedDict, Type, Callable, Optional
 import numpy as np
-from .tensor import Tensor, print_partial_d
+from my_torch.tensor import Tensor, print_partial_d
 # endregion
 
 # region Settings
